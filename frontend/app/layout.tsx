@@ -26,11 +26,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        style={{ background: "fafafa" }}
+        style={{ background: "#fafafa" }}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Sidebar />
-        {children}
+
+        <main className="lg:ml-64 pt-16 lg:pt-0">{children}</main>
       </body>
     </html>
   );
