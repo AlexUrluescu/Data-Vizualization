@@ -2,7 +2,18 @@ import { cn } from "@/lib/utils";
 import CitiesOptions from "@/components/custom/cities-options";
 import ChartAreaInteractive from "@/components/custom/chart";
 
-export default function Home() {
+async function getCities() {
+  const res = await fetch("http://127.0.0.1:5000/getCities");
+
+  if (!res.ok) throw new Error("Failed to fetch");
+  return res.json();
+}
+
+export default async function Home() {
+  const cities = await getCities();
+
+  console.log("cities", cities);
+
   const isMobile = false;
   return (
     <div className="h-full p-6 sm:p-12 lg:p-16">
@@ -24,7 +35,7 @@ export default function Home() {
           </div>
         </div>
 
-        <CitiesOptions />
+        <CitiesOptions citiesEntities={cities} />
         <ChartAreaInteractive />
       </div>
     </div>

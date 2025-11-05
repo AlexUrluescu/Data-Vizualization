@@ -2,7 +2,7 @@
 import { Button } from "../ui/button";
 import { mockData } from "@/app/mock";
 import { Input } from "../ui/input";
-import { useState } from "react";
+import React, { useState } from "react";
 
 enum CityType {
   ALL_CITIES = "All",
@@ -11,27 +11,39 @@ enum CityType {
   SMALL_CITIES = "Orașe mici",
 }
 
-export default function CitiesOptions() {
+type City = {
+  _id: string;
+  name: string;
+  region: string;
+};
+
+interface ICitiesOptions {
+  citiesEntities: City[];
+}
+
+export default function CitiesOptions({
+  citiesEntities,
+}: ICitiesOptions): React.ReactElement {
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
-  const [cities, setCities] = useState(mockData);
+  const [cities, setCities] = useState<City[]>(citiesEntities);
 
   const changeCityType = (type: CityType) => {
     setCityType(type);
 
     if (type === CityType.ALL_CITIES) {
-      setCities(mockData);
+      setCities(citiesEntities);
     } else if (type === CityType.BIG_CITIES) {
-      const big_cities = mockData.filter(
+      const big_cities = citiesEntities.filter(
         (city) => city.region === CityType.BIG_CITIES
       );
       setCities(big_cities);
     } else if (type === CityType.MEDIUM_CITIES) {
-      const medium_cities = mockData.filter(
+      const medium_cities = citiesEntities.filter(
         (city) => city.region === CityType.MEDIUM_CITIES
       );
       setCities(medium_cities);
     } else {
-      const small_cities = mockData.filter(
+      const small_cities = citiesEntities.filter(
         (city) => city.region === CityType.SMALL_CITIES
       );
       setCities(small_cities);
@@ -41,7 +53,7 @@ export default function CitiesOptions() {
   const handleInputSearch = (e: any) => {
     const value = e.target.value;
 
-    const similar_cities = mockData.filter((city) =>
+    const similar_cities = citiesEntities.filter((city) =>
       city.name.toLowerCase().includes(value)
     );
 
@@ -104,10 +116,10 @@ export default function CitiesOptions() {
 
       <div className="flex justify-center gap-4 flex-wrap">
         {cities.length > 0 ? (
-          cities.map((city, index) => (
+          cities.map((city) => (
             <Button
               onClick={() => console.log(city)}
-              key={index}
+              key={city._id}
               className="min-w-[10%]"
               variant={"outline"}
             >
