@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
@@ -13,6 +14,13 @@ MONGO_CLUSTER = os.getenv("MONGO_CLUSTER")
 MONGO_DB = os.getenv("MONGO_DB")
 
 app = Flask(__name__)
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_CLUSTER}/?appName={MONGO_DB}"
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -50,16 +58,55 @@ def get_cars():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# @app.route("/getCarsByCityId", methods=["GET"])
+# def get_cars_by_city():
+#     try:
+#         city_id = request.args.get("cityId")
+
+#         print(f"city_id {city_id}")
+#         if not city_id:
+#             return jsonify({"error": "cityId query parameter is required"}), 400
+#         cars_cursor = cars_collection.find({"cityId": city_id})
+
+#         print(f"cars_cursor {cars_cursor}")
+#         cars = [convert_objectid(doc) for doc in cars_cursor]
+#         return jsonify(cars), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
 @app.route("/getCarsByCityId", methods=["GET"])
 def get_cars_by_city():
     try:
         city_id = request.args.get("cityId")
+        print(f"city_id received: {city_id}")
+        
         if not city_id:
             return jsonify({"error": "cityId query parameter is required"}), 400
-        cars_cursor = cars_collection.find({"cityId": city_id})
-        cars = [convert_objectid(doc) for doc in cars_cursor]
-        return jsonify(cars), 200
+        
+        # Try querying with ObjectId first
+        try:
+            cars_cursor = cars_collection.find({"cityId": ObjectId(city_id)})
+            cars = [convert_objectid(doc) for doc in cars_cursor]
+            
+            # If no results, try as string
+            if not cars:
+                print("No results with ObjectId, trying string...")
+                cars_cursor = cars_collection.find({"cityId": city_id})
+                cars = [convert_objectid(doc) for doc in cars_cursor]
+            
+            print(f"Found {len(cars)} cars")
+            return jsonify(cars), 200
+            
+        except Exception as id_error:
+            print(f"ObjectId conversion error: {id_error}")
+            # Fallback to string query
+            cars_cursor = cars_collection.find({"cityId": city_id})
+            cars = [convert_objectid(doc) for doc in cars_cursor]
+            return jsonify(cars), 200
+            
     except Exception as e:
+        print(f"Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/getCarsByYear", methods=["GET"])
@@ -111,4 +158,4 @@ def get_cars_with_city_info():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
