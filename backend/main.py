@@ -5,9 +5,6 @@ from bson import ObjectId
 from dotenv import load_dotenv
 import os
 
-# ---------------------------
-# Load environment variables
-# ---------------------------
 load_dotenv()
 
 MONGO_USER = os.getenv("MONGO_USER")
@@ -15,14 +12,8 @@ MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
 MONGO_CLUSTER = os.getenv("MONGO_CLUSTER")
 MONGO_DB = os.getenv("MONGO_DB")
 
-# ---------------------------
-# Flask app setup
-# ---------------------------
 app = Flask(__name__)
 
-# ---------------------------
-# MongoDB connection
-# ---------------------------
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_CLUSTER}/?appName={MONGO_DB}"
 client = MongoClient(uri, server_api=ServerApi('1'))
 
@@ -30,9 +21,6 @@ db = client[MONGO_DB]
 cars_collection = db["cars"]
 cities_collection = db["cities"]
 
-# ---------------------------
-# Helper: convert ObjectId to str recursively
-# ---------------------------
 def convert_objectid(obj):
     if isinstance(obj, list):
         return [convert_objectid(item) for item in obj]
@@ -43,9 +31,6 @@ def convert_objectid(obj):
     else:
         return obj
 
-# ---------------------------
-# Endpoints
-# ---------------------------
 
 @app.route("/getCities", methods=["GET"])
 def get_cities():
@@ -124,8 +109,6 @@ def get_cars_with_city_info():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ---------------------------
-# Run Flask
-# ---------------------------
+
 if __name__ == "__main__":
     app.run(debug=True)
