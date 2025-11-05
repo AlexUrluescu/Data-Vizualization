@@ -1,8 +1,7 @@
 "use client";
 import { Button } from "../ui/button";
-import { mockData } from "@/app/mock";
 import { Input } from "../ui/input";
-import { useState } from "react";
+import React, { useState } from "react";
 
 enum CityType {
   ALL_CITIES = "All",
@@ -11,27 +10,72 @@ enum CityType {
   SMALL_CITIES = "Orașe mici",
 }
 
-export default function CitiesOptions() {
+type City = {
+  _id: string;
+  name: string;
+  region: string;
+};
+
+type CityCar = {
+  _id: string;
+  cityId: string;
+  amount: number;
+  year: number;
+};
+
+interface ICitiesOptions {
+  citiesEntities: City[];
+  chartData: (cityCars: CityCar[] | null) => void;
+}
+
+export default function CitiesOptions({
+  citiesEntities,
+  chartData,
+}: ICitiesOptions): React.ReactElement {
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
-  const [cities, setCities] = useState(mockData);
+  const [cities, setCities] = useState<City[]>(citiesEntities);
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+
+  async function getCarsByCityId(cityId: string) {
+    const res = await fetch(
+      `http://localhost:5001/getCarsByCityId?cityId=${cityId}`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch cars");
+    }
+
+    const data = await res.json();
+
+    if (selectedCityId === cityId) {
+      setSelectedCityId(null);
+      chartData(null);
+    } else {
+      setSelectedCityId(cityId);
+      chartData(data);
+    }
+  }
 
   const changeCityType = (type: CityType) => {
     setCityType(type);
 
     if (type === CityType.ALL_CITIES) {
-      setCities(mockData);
+      setCities(citiesEntities);
     } else if (type === CityType.BIG_CITIES) {
-      const big_cities = mockData.filter(
+      const big_cities = citiesEntities.filter(
         (city) => city.region === CityType.BIG_CITIES
       );
       setCities(big_cities);
     } else if (type === CityType.MEDIUM_CITIES) {
-      const medium_cities = mockData.filter(
+      const medium_cities = citiesEntities.filter(
         (city) => city.region === CityType.MEDIUM_CITIES
       );
       setCities(medium_cities);
     } else {
-      const small_cities = mockData.filter(
+      const small_cities = citiesEntities.filter(
         (city) => city.region === CityType.SMALL_CITIES
       );
       setCities(small_cities);
@@ -41,8 +85,12 @@ export default function CitiesOptions() {
   const handleInputSearch = (e: any) => {
     const value = e.target.value;
 
-    const similar_cities = mockData.filter((city) =>
-      city.name.toLowerCase().includes(value)
+    const cities_from_selected_region = citiesEntities.filter(
+      (city) => city.region === cityType
+    );
+
+    const similar_cities = cities_from_selected_region.filter((city) =>
+      city.name.toLowerCase().includes(value.toLowerCase())
     );
 
     setCities(similar_cities);
@@ -57,7 +105,14 @@ export default function CitiesOptions() {
         placeholder="City"
       />
 
-      <div style={{ display: "flex", gap: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: 20,
+        }}
+      >
         <Button
           onClick={() => changeCityType(CityType.ALL_CITIES)}
           style={{
@@ -104,11 +159,15 @@ export default function CitiesOptions() {
 
       <div className="flex justify-center gap-4 flex-wrap">
         {cities.length > 0 ? (
-          cities.map((city, index) => (
+          cities.map((city) => (
             <Button
-              onClick={() => console.log(city)}
-              key={index}
-              className="min-w-[10%]"
+              style={{
+                background: selectedCityId === city._id ? "orange" : "#ededed",
+                color: selectedCityId === city._id ? "white" : "black",
+              }}
+              onClick={() => getCarsByCityId(city._id)}
+              key={city._id}
+              className="min-w-[10%] transition-all duration-200 hover:brightness-105"
               variant={"outline"}
             >
               {city.name}

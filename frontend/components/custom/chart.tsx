@@ -25,29 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { carsData } from "@/app/mock";
-
-const chartData = [
-  { year: "2015", desktop: 18600, mobile: 12400 },
-  { year: "2016", desktop: 21300, mobile: 15800 },
-  { year: "2017", desktop: 25100, mobile: 19200 },
-  { year: "2018", desktop: 28900, mobile: 23500 },
-  { year: "2019", desktop: 32400, mobile: 28100 },
-  { year: "2020", desktop: 41200, mobile: 35600 },
-  { year: "2021", desktop: 45800, mobile: 42300 },
-  { year: "2022", desktop: 52100, mobile: 48900 },
-  { year: "2023", desktop: 58600, mobile: 55200 },
-  { year: "2024", desktop: 64300, mobile: 61800 },
-];
-
-const testData = carsData
-  .map((data) => {
-    return {
-      year: data.year,
-      cars: data.amount,
-    };
-  })
-  .reverse();
+import { CityCarsChartData } from "../../views/home";
 
 const chartConfig = {
   visitors: {
@@ -59,10 +37,16 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export default function ChartAreaInteractive() {
+interface IChartAreaInteractive {
+  cityCarsState: CityCarsChartData[];
+}
+
+export default function ChartAreaInteractive({
+  cityCarsState,
+}: IChartAreaInteractive) {
   const [timeRange, setTimeRange] = React.useState("10y");
 
-  const filteredData = testData.filter((item) => {
+  const filteredData = cityCarsState.filter((item) => {
     const year = item.year;
     const currentYear = 2024;
 
@@ -73,7 +57,7 @@ export default function ChartAreaInteractive() {
       yearsToShow = 3;
     }
 
-    return year > currentYear - yearsToShow;
+    return year >= currentYear - yearsToShow;
   });
 
   return (
@@ -142,6 +126,7 @@ export default function ChartAreaInteractive() {
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) => value}
+              interval="preserveStartEnd" // Ensures first and last ticks are shown
             />
             <ChartTooltip
               cursor={false}
