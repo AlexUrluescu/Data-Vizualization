@@ -1,6 +1,5 @@
 "use client";
 import { Button } from "../ui/button";
-import { mockData } from "@/app/mock";
 import { Input } from "../ui/input";
 import React, { useState } from "react";
 
@@ -17,15 +16,41 @@ type City = {
   region: string;
 };
 
+type CityCar = {
+  _id: string;
+  cityId: string;
+  amount: number;
+  year: number;
+};
+
 interface ICitiesOptions {
   citiesEntities: City[];
+  chartData: (cityCars: CityCar[]) => void;
 }
 
 export default function CitiesOptions({
   citiesEntities,
+  chartData,
 }: ICitiesOptions): React.ReactElement {
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
   const [cities, setCities] = useState<City[]>(citiesEntities);
+
+  async function getCarsByCityId(cityId: string) {
+    const res = await fetch(
+      `http://localhost:5001/getCarsByCityId?cityId=${cityId}`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch cars");
+    }
+
+    const data = await res.json();
+
+    chartData(data);
+  }
 
   const changeCityType = (type: CityType) => {
     setCityType(type);
@@ -118,7 +143,7 @@ export default function CitiesOptions({
         {cities.length > 0 ? (
           cities.map((city) => (
             <Button
-              onClick={() => console.log(city)}
+              onClick={() => getCarsByCityId(city._id)}
               key={city._id}
               className="min-w-[10%]"
               variant={"outline"}
