@@ -11,8 +11,6 @@ async function getCities() {
 export default async function Home() {
   const cities = await getCities();
 
-  console.log("cities", cities);
-
   const isMobile = false;
   return (
     <div className="h-full p-6 sm:p-12 lg:p-16">
