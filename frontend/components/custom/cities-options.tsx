@@ -25,7 +25,7 @@ type CityCar = {
 
 interface ICitiesOptions {
   citiesEntities: City[];
-  chartData: (cityCars: CityCar[]) => void;
+  chartData: (cityCars: CityCar[] | null) => void;
 }
 
 export default function CitiesOptions({
@@ -34,6 +34,7 @@ export default function CitiesOptions({
 }: ICitiesOptions): React.ReactElement {
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
   const [cities, setCities] = useState<City[]>(citiesEntities);
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
 
   async function getCarsByCityId(cityId: string) {
     const res = await fetch(
@@ -49,7 +50,13 @@ export default function CitiesOptions({
 
     const data = await res.json();
 
-    chartData(data);
+    if (selectedCityId === cityId) {
+      setSelectedCityId(null);
+      chartData(null);
+    } else {
+      setSelectedCityId(cityId);
+      chartData(data);
+    }
   }
 
   const changeCityType = (type: CityType) => {
@@ -78,8 +85,12 @@ export default function CitiesOptions({
   const handleInputSearch = (e: any) => {
     const value = e.target.value;
 
-    const similar_cities = citiesEntities.filter((city) =>
-      city.name.toLowerCase().includes(value)
+    const cities_from_selected_region = citiesEntities.filter(
+      (city) => city.region === cityType
+    );
+
+    const similar_cities = cities_from_selected_region.filter((city) =>
+      city.name.toLowerCase().includes(value.toLowerCase())
     );
 
     setCities(similar_cities);
@@ -94,7 +105,14 @@ export default function CitiesOptions({
         placeholder="City"
       />
 
-      <div style={{ display: "flex", gap: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: 20,
+        }}
+      >
         <Button
           onClick={() => changeCityType(CityType.ALL_CITIES)}
           style={{
@@ -143,9 +161,13 @@ export default function CitiesOptions({
         {cities.length > 0 ? (
           cities.map((city) => (
             <Button
+              style={{
+                background: selectedCityId === city._id ? "orange" : "#ededed",
+                color: selectedCityId === city._id ? "white" : "black",
+              }}
               onClick={() => getCarsByCityId(city._id)}
               key={city._id}
-              className="min-w-[10%]"
+              className="min-w-[10%] transition-all duration-200 hover:brightness-105"
               variant={"outline"}
             >
               {city.name}

@@ -31,7 +31,13 @@ export default function HomeView({
   const [cityCarsChartData, setCityCarsChartData] = useState<
     CityCarsChartData[] | null
   >(null);
-  const chartData = (cityCars: CityCar[]) => {
+  const chartData = (cityCars: CityCar[] | null) => {
+    if (cityCars === null) {
+      setCityCarsChartData(null);
+
+      return;
+    }
+
     const carsData = cityCars
       .map((data) => {
         return {
