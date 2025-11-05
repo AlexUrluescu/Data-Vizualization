@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import CitiesOptions from "@/components/custom/cities-options";
+import ChartAreaInteractive from "@/components/custom/chart";
 
 export default function Home() {
   const isMobile = false;
@@ -24,6 +25,7 @@ export default function Home() {
         </div>
 
         <CitiesOptions />
+        <ChartAreaInteractive />
       </div>
     </div>
   );

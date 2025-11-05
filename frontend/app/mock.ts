@@ -92,3 +92,5 @@ export const mockData = [
     region: "Orașe mici",
   },
 ];
+
+export const carsData = [];
