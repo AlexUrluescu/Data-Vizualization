@@ -1,9 +1,8 @@
 import { cn } from "@/lib/utils";
-import CitiesOptions from "@/components/custom/cities-options";
-import ChartAreaInteractive from "@/components/custom/chart";
+import HomeView from "@/views/home";
 
 async function getCities() {
-  const res = await fetch("http://127.0.0.1:5000/getCities");
+  const res = await fetch("http://127.0.0.1:5001/getCities");
 
   if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
@@ -35,8 +34,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <CitiesOptions citiesEntities={cities} />
-        <ChartAreaInteractive />
+        <HomeView citiesEntities={cities} />
       </div>
     </div>
   );
