@@ -1,3 +1,4 @@
+import { ChartBarLabel } from "@/components/custom/barChart";
 import { cn } from "@/lib/utils";
 import HomeView from "@/views/home";
 
@@ -33,6 +34,7 @@ export default async function Home() {
         </div>
 
         <HomeView citiesEntities={cities} />
+        <ChartBarLabel />
       </div>
     </div>
   );
