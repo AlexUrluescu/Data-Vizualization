@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        style={{ background: "#fafafa" }}
+        style={{ background: "#fdfdfd" }}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Sidebar />

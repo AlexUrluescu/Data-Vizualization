@@ -116,7 +116,8 @@ export default function CitiesOptions({
         <Button
           onClick={() => changeCityType(CityType.ALL_CITIES)}
           style={{
-            background: cityType === CityType.ALL_CITIES ? "orange" : "#ededed",
+            background:
+              cityType === CityType.ALL_CITIES ? "#FF7518" : "#ededed",
             color: cityType === CityType.ALL_CITIES ? "white" : "black",
             cursor: "pointer",
           }}
@@ -126,7 +127,8 @@ export default function CitiesOptions({
         <Button
           onClick={() => changeCityType(CityType.BIG_CITIES)}
           style={{
-            background: cityType === CityType.BIG_CITIES ? "orange" : "#ededed",
+            background:
+              cityType === CityType.BIG_CITIES ? "#FF7518" : "#ededed",
             color: cityType === CityType.BIG_CITIES ? "white" : "black",
             cursor: "pointer",
           }}
@@ -137,7 +139,7 @@ export default function CitiesOptions({
           onClick={() => changeCityType(CityType.MEDIUM_CITIES)}
           style={{
             background:
-              cityType === CityType.MEDIUM_CITIES ? "orange" : "#ededed",
+              cityType === CityType.MEDIUM_CITIES ? "#FF7518" : "#ededed",
             color: cityType === CityType.MEDIUM_CITIES ? "white" : "black",
             cursor: "pointer",
           }}
@@ -148,7 +150,7 @@ export default function CitiesOptions({
           onClick={() => changeCityType(CityType.SMALL_CITIES)}
           style={{
             background:
-              cityType === CityType.SMALL_CITIES ? "orange" : "#ededed",
+              cityType === CityType.SMALL_CITIES ? "#FF7518" : "#ededed",
             color: cityType === CityType.SMALL_CITIES ? "white" : "black",
             cursor: "pointer",
           }}
@@ -162,12 +164,15 @@ export default function CitiesOptions({
           cities.map((city) => (
             <Button
               style={{
-                background: selectedCityId === city._id ? "orange" : "#ededed",
-                color: selectedCityId === city._id ? "white" : "black",
+                background: selectedCityId === city._id ? "#FF7518" : "white",
               }}
               onClick={() => getCarsByCityId(city._id)}
               key={city._id}
-              className="min-w-[10%] transition-all duration-200 hover:brightness-105"
+              className={`min-w-[10%] transition-all duration-200 ${
+                selectedCityId === city._id
+                  ? "text-white hover:text-white"
+                  : "text-gray-500 hover:text-black"
+              }`}
               variant={"outline"}
             >
               {city.name}
