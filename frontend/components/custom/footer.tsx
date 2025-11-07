@@ -1,6 +1,4 @@
 import React, { JSX } from "react";
-import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
 import { Github, Twitter, Mail } from "lucide-react";
 
 export default function Footer(): JSX.Element {
