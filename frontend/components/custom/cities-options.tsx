@@ -38,7 +38,7 @@ export default function CitiesOptions({
 
   async function getCarsByCityId(cityId: string) {
     const res = await fetch(
-      `http://localhost:5001/getCarsByCityId?cityId=${cityId}`,
+      `http://localhost:5001/api/v1/cars?cityId=${cityId}`,
       {
         cache: "no-store",
       }
