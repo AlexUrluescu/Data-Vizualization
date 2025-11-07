@@ -14,3 +14,8 @@ def get_cities():
         return jsonify(cities), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@city_routes.route("/test", methods=["GET"])
+def test_cities():
+    return jsonify(list(cities_collection.find())), 200
+

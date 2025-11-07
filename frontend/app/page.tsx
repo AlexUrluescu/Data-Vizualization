@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import HomeView from "@/views/home";
 
 async function getCities() {
-  const res = await fetch("http://127.0.0.1:5001/getCities");
+  const res = await fetch("http://127.0.0.1:5001/api/v1/cities");
 
   if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
