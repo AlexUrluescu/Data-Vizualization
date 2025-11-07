@@ -11,12 +11,7 @@ def create_app():
   app.register_blueprint(car_routes, url_prefix='/api/v1/cars')
   app.register_blueprint(city_routes, url_prefix='/api/v1/cities')
 
-  # Allow all headers & methods
-  @app.after_request
-  def after_request(response):
-      response.headers.add('Access-Control-Allow-Origin', '*')
-      response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-      response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-      return response
+  # Allow all headers & methods for CORS
+  CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
   return app
