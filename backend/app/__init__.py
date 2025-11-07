@@ -3,6 +3,10 @@ from flask_cors import CORS
 from app.routes.v1.car_routes import car_routes
 from app.routes.v1.city_routes import city_routes
 from app.routes.v1.population_routes import population_routes
+from app.routes.v1.parking_spots_routes import parking_spots_routes
+
+from backend.app.routes.v1.parking_spots_routes import parking_spots_collection
+
 
 def create_app():
   app = Flask(__name__)
@@ -16,7 +20,8 @@ def create_app():
   app.register_blueprint(car_routes, url_prefix='/api/v1/cars')
   app.register_blueprint(city_routes, url_prefix='/api/v1/cities')
   app.register_blueprint(population_routes, url_prefix='/api/v1/population')
-  
+  app.register_blueprint(parking_spots_routes, url_prefix='/api/v1/parking_spots')
+
   # for bp, prefix in [
   #   (car_routes, '/api/v1/cars'),
   #   (city_routes, '/api/v1/cities'),
