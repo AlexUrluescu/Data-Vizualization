@@ -59,7 +59,7 @@ export default function Sidebar() {
               asChild
               onClick={() => setIsOpen(false)}
             >
-              <Link href="/profile">
+              <Link href="/urban">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Urban AI
               </Link>

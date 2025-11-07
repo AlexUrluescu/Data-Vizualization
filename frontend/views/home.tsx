@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import ChartAreaInteractive from "../components/custom/chart";
 import CitiesOptions from "../components/custom/cities-options";
+import SibiuTrafficMap from "@/components/custom/map";
 
 type City = {
   _id: string;
