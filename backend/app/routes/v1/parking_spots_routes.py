@@ -1,6 +1,6 @@
-from pyexpat import errors
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
+from bson.errors import InvalidId
 from app.config import Config
 from app.models.helpers import convert_objectid
 
@@ -22,7 +22,7 @@ def get_parking_spots():
         if city_id:
             try:
                 query["cityId"] = ObjectId(city_id)
-            except (errors.InvalidId, TypeError):
+            except (InvalidId, TypeError):
                 return jsonify({"error": "Invalid cityId"}), 400
         if year:
             try:
