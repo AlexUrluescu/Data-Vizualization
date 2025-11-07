@@ -54,7 +54,9 @@ export default function HomeView({
     <div className="flex flex-col gap-10">
       <CitiesOptions citiesEntities={citiesEntities} chartData={chartData} />
       {cityCarsChartData !== null ? (
-        <ChartAreaInteractive cityCarsState={cityCarsChartData} />
+        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+          <ChartAreaInteractive title={"Cars"} cityCarsState={cityCarsChartData} />
+         <ChartAreaInteractive title={"Population"}cityCarsState={cityCarsChartData} /></div>
       ) : null}
     </div>
   );
