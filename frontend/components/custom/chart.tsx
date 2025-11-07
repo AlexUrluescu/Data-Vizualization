@@ -36,18 +36,24 @@ const chartConfig = {
     label: "Population",
     color: "hsl(var(--chart-2))",
   },
+  parking: {
+    label: "Parking",
+    color: "hsl(var(--chart-2))",
+  },
 } satisfies ChartConfig;
 
 interface IChartAreaInteractive {
   cityCarsState: CityCarsChartData[];
   title: string;
   type: "cars" | "population" | "parking";
+  flex: boolean;
 }
 
 export default function ChartAreaInteractive({
   cityCarsState,
   title,
   type,
+  flex,
 }: IChartAreaInteractive) {
   const [timeRange, setTimeRange] = React.useState("10y");
 
@@ -66,7 +72,7 @@ export default function ChartAreaInteractive({
   });
 
   return (
-    <Card className="pt-0">
+    <Card style={{ width: flex ? "50%" : "100%" }} className="pt-0">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
           <CardTitle>{title} Chart - Interactive</CardTitle>

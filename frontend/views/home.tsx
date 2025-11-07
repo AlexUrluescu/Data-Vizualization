@@ -22,6 +22,7 @@ export type CityCarsChartData = {
   year: number;
   cars?: number;
   population?: number;
+  parking?: number;
 };
 
 interface ICitiesOptions {
@@ -107,20 +108,26 @@ export default function HomeView({
         cityCarsChartDataParkings && (
           <div className="flex flex-col gap-5">
             <ChartAreaInteractive
+              flex={false}
               title="Cars"
               cityCarsState={cityCarsChartData}
               type="cars"
             />
-            <ChartAreaInteractive
-              title="Population"
-              cityCarsState={cityCarsChartDataPopulation}
-              type="population"
-            />
-            <ChartAreaInteractive
-              title="Population"
-              cityCarsState={cityCarsChartDataParkings}
-              type="parking"
-            />
+
+            <div style={{ display: "flex", gap: 20 }}>
+              <ChartAreaInteractive
+                flex={true}
+                title="Population"
+                cityCarsState={cityCarsChartDataPopulation}
+                type="population"
+              />
+              <ChartAreaInteractive
+                flex={true}
+                title="Parking"
+                cityCarsState={cityCarsChartDataParkings}
+                type="parking"
+              />
+            </div>
           </div>
         )}
     </div>
