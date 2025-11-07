@@ -17,7 +17,7 @@ def create_app():
   app.register_blueprint(car_routes, url_prefix='/api/v1/cars')
   app.register_blueprint(city_routes, url_prefix='/api/v1/cities')
   app.register_blueprint(population_routes, url_prefix='/api/v1/population')
-  app.register_blueprint(traffic_routes, url_prefix="/api/traffic")
+  app.register_blueprint(traffic_routes, url_prefix="/api/v1/traffic")
   
   # for bp, prefix in [
   #   (car_routes, '/api/v1/cars'),
