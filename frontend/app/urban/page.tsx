@@ -24,16 +24,6 @@ async function getCities() {
 export default async function Urban() {
   const cities = await getCities();
 
-  // Your mock data
-  const mockData: MockData = {
-    users: [
-      { id: 1, name: "John", age: 28, purchases: 15 },
-      { id: 2, name: "Sarah", age: 34, purchases: 23 },
-    ],
-    revenue: 45000,
-    period: "Q4 2024",
-  };
-
   const isMobile = false;
   return (
     <div
@@ -41,10 +31,7 @@ export default async function Urban() {
       className="h-full p-6 sm:p-12 lg:p-16"
     >
       <SibiuTrafficMap />
-      <ChatWithAI
-        data={mockData}
-        dataDescription="user analytics and revenue data"
-      />
+      <ChatWithAI dataDescription="user analytics and revenue data" />
     </div>
   );
 }
