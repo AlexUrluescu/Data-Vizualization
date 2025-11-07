@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { CityCarsChartData } from "../../views/home";
 
+
 const chartConfig = {
   visitors: {
     label: "Visitors",
@@ -39,10 +40,12 @@ const chartConfig = {
 
 interface IChartAreaInteractive {
   cityCarsState: CityCarsChartData[];
+  title : string;
 }
 
 export default function ChartAreaInteractive({
   cityCarsState,
+  title
 }: IChartAreaInteractive) {
   const [timeRange, setTimeRange] = React.useState("10y");
 
@@ -64,7 +67,7 @@ export default function ChartAreaInteractive({
     <Card className="pt-0">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
-          <CardTitle>Area Chart - Interactive</CardTitle>
+          <CardTitle>{title} Chart - Interactive</CardTitle>
           <CardDescription>Showing total cars over the years</CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
