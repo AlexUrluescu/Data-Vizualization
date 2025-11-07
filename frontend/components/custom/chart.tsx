@@ -27,25 +27,22 @@ import {
 } from "@/components/ui/select";
 import { CityCarsChartData } from "../../views/home";
 
-
+// Chart config
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
-  },
-  cars: {
-    label: "Cars",
-    color: "var(--chart-1)",
-  },
+  cars: { label: "Cars" },
+  population: { label: "Population" },
 } satisfies ChartConfig;
 
 interface IChartAreaInteractive {
   cityCarsState: CityCarsChartData[];
-  title : string;
+  title: string;
+  type: "cars" | "population"; // Chart type
 }
 
 export default function ChartAreaInteractive({
   cityCarsState,
-  title
+  title,
+  type,
 }: IChartAreaInteractive) {
   const [timeRange, setTimeRange] = React.useState("10y");
 
@@ -54,11 +51,8 @@ export default function ChartAreaInteractive({
     const currentYear = 2024;
 
     let yearsToShow = 10;
-    if (timeRange === "5y") {
-      yearsToShow = 5;
-    } else if (timeRange === "3y") {
-      yearsToShow = 3;
-    }
+    if (timeRange === "5y") yearsToShow = 5;
+    else if (timeRange === "3y") yearsToShow = 3;
 
     return year >= currentYear - yearsToShow;
   });
@@ -68,7 +62,7 @@ export default function ChartAreaInteractive({
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
           <CardTitle>{title} Chart - Interactive</CardTitle>
-          <CardDescription>Showing total cars over the years</CardDescription>
+          <CardDescription>Showing total {title} over the years</CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger
@@ -91,35 +85,14 @@ export default function ChartAreaInteractive({
         </Select>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
-        >
+        <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
           <AreaChart data={filteredData}>
             <defs>
-              <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-desktop)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-desktop)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-              <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-mobile)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-mobile)"
-                  stopOpacity={0.1}
-                />
+              {/* Gradient green → yellow → red */}
+              <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="red" stopOpacity={0.8} />
+                <stop offset="50%" stopColor="yellow" stopOpacity={0.8} />
+                <stop offset="100%" stopColor="green" stopOpacity={0.8} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} />
@@ -128,8 +101,7 @@ export default function ChartAreaInteractive({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => value}
-              interval="preserveStartEnd" // Ensures first and last ticks are shown
+              interval="preserveStartEnd"
             />
             <ChartTooltip
               cursor={false}
@@ -141,16 +113,9 @@ export default function ChartAreaInteractive({
               }
             />
             <Area
-              dataKey="mobile"
+              dataKey={type} // Dynamic: cars or population
               type="natural"
-              fill="url(#fillMobile)"
-              stroke="var(--color-mobile)"
-              stackId="a"
-            />
-            <Area
-              dataKey="cars"
-              type="natural"
-              fill="url(#fillDesktop)"
+              fill="url(#gradient)"
               stroke="var(--color-desktop)"
               stackId="a"
             />
