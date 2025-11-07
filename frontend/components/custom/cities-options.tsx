@@ -26,11 +26,15 @@ type CityCar = {
 interface ICitiesOptions {
   citiesEntities: City[];
   chartData: (cityCars: CityCar[] | null) => void;
+  chartDataPopulation: (cityCars: CityCar[] | null) => void;
+  chartDataParkings: (cityCars: CityCar[] | null) => void;
 }
 
 export default function CitiesOptions({
   citiesEntities,
   chartData,
+  chartDataPopulation,
+  chartDataParkings,
 }: ICitiesOptions): React.ReactElement {
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
   const [cities, setCities] = useState<City[]>(citiesEntities);
@@ -50,12 +54,46 @@ export default function CitiesOptions({
 
     const data = await res.json();
 
+    const res2 = await fetch(
+      `http://localhost:5001/api/v1/population?cityId=${cityId}`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch cars");
+    }
+
+    const data2 = await res2.json();
+
+    console.log("data2", data2);
+
+    const res3 = await fetch(
+      `http://localhost:5001/api/v1/parking_spots?cityId=${cityId}`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch cars");
+    }
+
+    const data3 = await res3.json();
+
+    console.log("data3", data3);
+
     if (selectedCityId === cityId) {
       setSelectedCityId(null);
       chartData(null);
+      chartDataPopulation(null);
+      chartDataParkings(null);
     } else {
       setSelectedCityId(cityId);
       chartData(data);
+      chartDataPopulation(data2);
+      chartDataParkings(data3);
     }
   }
 
@@ -105,7 +143,7 @@ export default function CitiesOptions({
         placeholder="City"
       />
 
-      <div
+      {/* <div
         style={{
           display: "flex",
           flexWrap: "wrap",
@@ -155,7 +193,7 @@ export default function CitiesOptions({
         >
           Orașe mici
         </Button>
-      </div>
+      </div> */}
 
       <div className="flex justify-center gap-4 flex-wrap">
         {cities.length > 0 ? (
@@ -165,7 +203,7 @@ export default function CitiesOptions({
                 background: selectedCityId === city._id ? "orange" : "#ededed",
                 color: selectedCityId === city._id ? "white" : "black",
               }}
-              onClick={() => getCarsByCityId(city._id)}
+              onClick={() => getCarsByCityId("6908d624c8c026b45976c717")}
               key={city._id}
               className="min-w-[10%] transition-all duration-200 hover:brightness-105"
               variant={"outline"}

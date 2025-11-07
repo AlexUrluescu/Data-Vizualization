@@ -27,16 +27,21 @@ import {
 } from "@/components/ui/select";
 import { CityCarsChartData } from "../../views/home";
 
-// Chart config
 const chartConfig = {
-  cars: { label: "Cars" },
-  population: { label: "Population" },
+  cars: {
+    label: "Cars",
+    color: "hsl(var(--chart-1))",
+  },
+  population: {
+    label: "Population",
+    color: "hsl(var(--chart-2))",
+  },
 } satisfies ChartConfig;
 
 interface IChartAreaInteractive {
   cityCarsState: CityCarsChartData[];
   title: string;
-  type: "cars" | "population"; // Chart type
+  type: "cars" | "population" | "parking";
 }
 
 export default function ChartAreaInteractive({
@@ -48,11 +53,14 @@ export default function ChartAreaInteractive({
 
   const filteredData = cityCarsState.filter((item) => {
     const year = item.year;
-    const currentYear = 2024;
+    const currentYear = new Date().getFullYear();
 
     let yearsToShow = 10;
-    if (timeRange === "5y") yearsToShow = 5;
-    else if (timeRange === "3y") yearsToShow = 3;
+    if (timeRange === "5y") {
+      yearsToShow = 5;
+    } else if (timeRange === "3y") {
+      yearsToShow = 3;
+    }
 
     return year >= currentYear - yearsToShow;
   });
@@ -62,7 +70,9 @@ export default function ChartAreaInteractive({
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
           <CardTitle>{title} Chart - Interactive</CardTitle>
-          <CardDescription>Showing total {title} over the years</CardDescription>
+          <CardDescription>
+            Showing total {title} over the years
+          </CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger
@@ -85,7 +95,10 @@ export default function ChartAreaInteractive({
         </Select>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+        <ChartContainer
+          config={chartConfig}
+          className="aspect-auto h-[250px] w-full"
+        >
           <AreaChart data={filteredData}>
             <defs>
               {/* Gradient green → yellow → red */}

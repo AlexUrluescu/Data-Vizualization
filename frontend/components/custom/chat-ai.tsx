@@ -49,7 +49,7 @@ export default function ChatWithAI({}: ChatWithAIProps) {
       const API_URL =
         process.env.NODE_ENV === "production"
           ? "/api/traffic/ask"
-          : "http://localhost:5001/api/v1/traffic/ask";
+          : "http://localhost:5001/api/v1/traffic-chat-bot/ask";
 
       console.log("userMessage", userMessage);
 

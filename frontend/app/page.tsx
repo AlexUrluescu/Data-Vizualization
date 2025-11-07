@@ -9,7 +9,11 @@ async function getCities() {
 }
 
 export default async function Home() {
-  const cities = await getCities();
+  const cities1 = await getCities();
+
+  const cities = cities1.filter(
+    (city: any) => city._id === "6908d624c8c026b45976c717"
+  );
 
   const isMobile = false;
   return (
