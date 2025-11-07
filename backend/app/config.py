@@ -13,11 +13,10 @@ class Config:
   
   @staticmethod
   def get_db():
-    print(Config.MONGO_USER, Config.MONGO_DB, Config.MONGO_CLUSTER)
     uri = f"mongodb+srv://{Config.MONGO_USER}:{Config.MONGO_PASSWORD}@{Config.MONGO_CLUSTER}/?appName={Config.MONGO_DB}"
+    
     client = MongoClient(uri, server_api=ServerApi('1'))
+    
     db = client[Config.MONGO_DB]
-    print("Connected DB:", db.name)
-    print("Collections:", db.list_collection_names())
 
     return db
