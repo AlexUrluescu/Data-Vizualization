@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import ChartAreaInteractive from "../components/custom/chart";
 import CitiesOptions from "../components/custom/cities-options";
+import SibiuTrafficMap from "@/components/custom/map";
 
 type City = {
   _id: string;
@@ -54,9 +55,16 @@ export default function HomeView({
     <div className="flex flex-col gap-10">
       <CitiesOptions citiesEntities={citiesEntities} chartData={chartData} />
       {cityCarsChartData !== null ? (
-        <div style={{display:"flex",flexDirection:"column",gap:20}}>
-          <ChartAreaInteractive title={"Cars"} cityCarsState={cityCarsChartData} />
-         <ChartAreaInteractive title={"Population"}cityCarsState={cityCarsChartData} /></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <ChartAreaInteractive
+            title={"Cars"}
+            cityCarsState={cityCarsChartData}
+          />
+          <ChartAreaInteractive
+            title={"Population"}
+            cityCarsState={cityCarsChartData}
+          />
+        </div>
       ) : null}
     </div>
   );
