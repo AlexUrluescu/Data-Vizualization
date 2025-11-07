@@ -1,35 +1,25 @@
 import os
 import json
+import requests
+from typing import List, Dict
 from pymongo import MongoClient
-from langchain_google_genai import ChatGoogleGenerativeAI
 
+# MongoDB credentials
+MONGO_USER = "alexurluescu23_db_user"
+MONGO_PASSWORD = "y8MDoUisyGf2Gayo"
+MONGO_CLUSTER = "cluster0.c9gvi0h.mongodb.net"
+MONGO_DB = "urbanbike"
 
-# MONGO_USER = os.getenv("MONGO_USER")
-# MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
-# MONGO_CLUSTER = os.getenv("MONGO_CLUSTER")
-# MONGO_DB = os.getenv("MONGO_DB")
-# GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY")
-
-MONGO_USER="alexurluescu23_db_user"
-MONGO_PASSWORD="y8MDoUisyGf2Gayo"
-MONGO_CLUSTER="cluster0.c9gvi0h.mongodb.net"
-MONGO_DB="urbanbike"
-GOOGLE_API_KEY="AIzaSyCGQ7uZUyNMkdscSEPUfUTzvW0GBpBCmrU"
+# Ollama configuration
+OLLAMA_URL = "http://localhost:11434"
+OLLAMA_MODEL = "qwen3-coder:30b"
 
 # MongoDB connection
 MONGO_URI = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_CLUSTER}/?appName={MONGO_DB}"
 
 print(MONGO_URI)
-client = MongoClient(MONGO_URI)
-db = client.urbanbike
-
-# Google AI setup
-# GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=GOOGLE_API_KEY,
-    temperature=0
-)
+client_mongo = MongoClient(MONGO_URI)
+db = client_mongo.urbanbike
 
 # Database schema information
 SCHEMA_INFO = """
@@ -55,8 +45,71 @@ Schema:
 Relationship: cars.cityId references cities._id
 """
 
+def ollama_chat(
+    base_url: str,
+    model: str,
+    messages: List[Dict[str, str]],
+    temperature: float = 0.3,
+    timeout: int = 360000,
+) -> str:
+    """
+    Calls Ollama's native /api/chat endpoint using requests.
+    Returns the assistant message content string.
+    """
+    print(messages)
+    url = f"{base_url.rstrip('/')}/api/chat"  # Changed from /chat/completions
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": False,  # Important: set to False for non-streaming
+        "options": {
+            "num_ctx": 12000,
+            "temperature": temperature,
+            "top_k": 30,
+            "top_p": 0.9,
+            "num_predict": -1
+        }
+    }
+    resp = requests.post(url, json=payload, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json()
+    # Native Ollama API response structure:
+    # { "message": { "role": "assistant", "content": "..." }, ... }
+    try:
+        return data["message"]["content"]
+    except Exception:
+        # Fallback: show raw for debugging
+        return f"[Unexpected response]\n{json.dumps(data, indent=2)}"
+
+
+def check_ollama_connection():
+    """Check if Ollama is running and model is available."""
+    try:
+        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
+        response.raise_for_status()
+        models = response.json()
+        
+        available_models = [model['name'] for model in models.get('models', [])]
+        
+        print(f"✅ Ollama is running")
+        print(f"📦 Available models: {', '.join(available_models)}\n")
+        
+        if OLLAMA_MODEL not in available_models:
+            print(f"⚠️  Warning: Model '{OLLAMA_MODEL}' not found!")
+            print(f"💡 Please either:")
+            print(f"   1. Pull the model: ollama pull {OLLAMA_MODEL}")
+            print(f"   2. Change OLLAMA_MODEL to one of: {', '.join(available_models)}\n")
+            return False
+        
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Cannot connect to Ollama at {OLLAMA_URL}")
+        print(f"   Make sure Ollama is running: ollama serve")
+        print(f"   Error: {e}\n")
+        return False
+
 def generate_mongodb_query(question):
-    """Use Google AI to generate a MongoDB query from natural language."""
+    """Use Ollama to generate a MongoDB query from natural language."""
     try:
         prompt = f"""You are a MongoDB query generator. Given a natural language question, generate the appropriate MongoDB query.
 
@@ -81,11 +134,21 @@ Example response:
 }}
 """
         
-        # Invoke the LLM
-        result = llm.invoke(prompt)
+        # Call Ollama using the ollama_chat function
+        messages = [
+            {"role": "system", "content": "You are a MongoDB query generator that responds only with valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
         
-        # Extract content from result
-        content = result.content if hasattr(result, 'content') else str(result)
+        content = ollama_chat(
+            base_url=OLLAMA_URL,
+            model=OLLAMA_MODEL,
+            messages=messages,
+            temperature=0
+        )
+        
+        if not content:
+            return None
         
         # Clean the response (remove markdown code blocks if present)
         content = content.strip()
@@ -139,7 +202,7 @@ def execute_mongodb_query(query_info):
         return None
 
 def generate_human_response(question, results):
-    """Use Google AI to generate a human-friendly response."""
+    """Use Ollama to generate a human-friendly response."""
     try:
         prompt = f"""You are a helpful assistant. Based on the user's question and the data retrieved from the database, provide a clear, natural, and informative response.
 
@@ -150,13 +213,23 @@ Database Results: {json.dumps(results, indent=2)}
 Generate a human-friendly response that answers the user's question based on the data. Be conversational and clear.
 """
         
-        # Invoke the LLM
-        result = llm.invoke(prompt)
+        # Call Ollama using the ollama_chat function
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant that provides clear and natural responses."},
+            {"role": "user", "content": prompt}
+        ]
         
-        # Extract content from result
-        response = result.content if hasattr(result, 'content') else str(result)
+        answer = ollama_chat(
+            base_url=OLLAMA_URL,
+            model=OLLAMA_MODEL,
+            messages=messages,
+            temperature=0.3
+        )
         
-        return response
+        if not answer:
+            return "I'm sorry, I couldn't generate a response based on the data."
+        
+        return answer
     except Exception as e:
         print(f"Error generating response: {e}")
         return "I'm sorry, I couldn't generate a response based on the data."
@@ -164,8 +237,13 @@ Generate a human-friendly response that answers the user's question based on the
 def main():
     """Main function to run the AI-powered MongoDB assistant."""
     print("=" * 60)
-    print("AI-Powered MongoDB Query Assistant")
+    print("AI-Powered MongoDB Query Assistant (Ollama)")
     print("=" * 60)
+    
+    # Check Ollama connection first
+    if not check_ollama_connection():
+        return
+    
     print("Ask questions about cities and cars data.")
     print("Type 'exit' or 'quit' to stop.\n")
     
