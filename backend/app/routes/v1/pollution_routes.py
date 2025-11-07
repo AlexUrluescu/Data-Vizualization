@@ -4,13 +4,13 @@ from bson import ObjectId
 from app.config import Config
 from app.models.helpers import convert_objectid
 
-population_routes = Blueprint("population_routes", __name__)
+pollution_routes = Blueprint("pollution_routes", __name__)
 db = Config.get_db()
-population_collection = db["population"]
+pollution_collection = db["pollution"]
 cities_collection = db["cities"]
 
-@population_routes.route("/", methods=["GET"])
-def get_population():
+@pollution_routes.route("/", methods=["GET"])
+def get_pollution():
     try:
         # Collect optional query params
         city_id = request.args.get("cityId")
@@ -30,9 +30,9 @@ def get_population():
             except ValueError:
                 return jsonify({"error": "Year must be an integer"}), 400
 
-        # Fetch population data
-        population_cursor = population_collection.find(query)
-        population = [convert_objectid(doc) for doc in population_cursor]
+        # Fetch pollution data
+        pollution_cursor = pollution_collection.find(query)
+        pollution = [convert_objectid(doc) for doc in pollution_cursor]
 
         # If requested, include city info
         if include_city and city_id:
@@ -40,12 +40,12 @@ def get_population():
             if not city:
                 return jsonify({"error": "City not found"}), 404
             response = {
-                "cars": population,
+                "pollution": pollution,
                 "city": convert_objectid(city)
             }
             return jsonify(response), 200
 
-        return jsonify(population), 200
+        return jsonify(pollution), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -40,8 +40,8 @@ def get_cars():
             if not city:
                 return jsonify({"error": "City not found"}), 404
             response = {
-                "city": convert_objectid(city),
-                "cars": cars
+                "cars": cars,
+                "city": convert_objectid(city)
             }
             return jsonify(response), 200
 
