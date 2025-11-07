@@ -6,7 +6,7 @@ city_routes = Blueprint("city_routes", __name__)
 db = Config.get_db()
 cities_collection = db["cities"]
 
-@city_routes.route("/getCities", methods=["GET"])
+@city_routes.route("/", methods=["GET"])
 def get_cities():
     try:
         cities_cursor = cities_collection.find()
