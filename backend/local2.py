@@ -44,14 +44,54 @@ Document example:
 }
 
 IMPORTANT RULES FOR QUERY GENERATION:
-1. ALWAYS use "aggregate" for any question involving dailyStats
-2. To access a specific date → $unwind "$dailyStats" → $match "dailyStats.date"
-3. To get hourly data → $objectToArray on "dailyStats.hourlyCarCount"
-4. Hours are strings "00" to "23"
-5. Today = "2025-11-07", Yesterday = "2025-11-06"
-6. For "peak hour" → $sort hourly.v descending → $limit 1
-7. For "difference between two days" → fetch full document → Python calculates (recommended)
-8. For "busiest day" → fetch full document → Python finds max totalCars
+1. ALWAYS extract and use the street name from the user's question
+2. Use case-insensitive regex for street matching: {"name": {"$regex": "^StreetName$", "$options": "i"}}
+3. ALWAYS use MongoDB aggregation pipelines - NO Python processing
+4. Current date: 2025-11-07 (today), 2025-11-06 (yesterday)
+5. Hours are strings "00" to "23" in hourlyCarCount object
+
+QUERY PATTERNS:
+
+A. Peak hour (single day):
+   - $match street name
+   - $unwind "$dailyStats"
+   - $match date
+   - $project with $objectToArray on hourlyCarCount
+   - $unwind hourly array
+   - $sort by value descending
+   - $limit 1
+
+B. Total cars (single day):
+   - $match street name
+   - $unwind "$dailyStats"
+   - $match date
+   - $project to show totalCars
+
+C. Cars at specific hour:
+   - $match street name
+   - $unwind "$dailyStats"
+   - $match date
+   - $project to extract specific hour from hourlyCarCount (e.g., "$dailyStats.hourlyCarCount.15")
+
+D. Difference between two days:
+   - $match street name
+   - $unwind "$dailyStats"
+   - $match dates with $in
+   - $group with $cond to separate days
+   - $project with $subtract to calculate difference
+
+E. Busiest day (find which day had most cars):
+   - $match street name
+   - $unwind "$dailyStats"
+   - $sort by totalCars descending
+   - $limit 1
+
+F. Compare hourly data between two days:
+   - $match street name
+   - $unwind "$dailyStats"
+   - $match dates with $in
+   - $group with $cond for each hour
+   - $project to calculate differences
 """
 
 # ========================= OLLAMA =========================
@@ -71,82 +111,209 @@ def ollama_chat(messages: List[Dict], temperature: float = 0.0) -> str:
         print(f"Ollama error: {e}")
         return ""
 
+# ========================= CHECK OLLAMA =========================
+def check_ollama_connection():
+    """Check if Ollama is running and model is available."""
+    try:
+        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
+        response.raise_for_status()
+        models = response.json()
+        
+        available_models = [model['name'] for model in models.get('models', [])]
+        
+        print(f"✅ Ollama is running")
+        print(f"📦 Available models: {', '.join(available_models)}")
+        
+        if OLLAMA_MODEL not in available_models:
+            print(f"⚠️  Warning: Model '{OLLAMA_MODEL}' not found!")
+            print(f"💡 Pull the model: ollama pull {OLLAMA_MODEL}\n")
+            return False
+        
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Cannot connect to Ollama at {OLLAMA_URL}")
+        print(f"   Make sure Ollama is running: ollama serve")
+        print(f"   Error: {e}\n")
+        return False
+
+# ========================= EXTRACT STREET NAME =========================
+def extract_street_name(question: str) -> str:
+    """Extract street name from user question using AI"""
+    prompt = f"""Extract ONLY the street name from this question. Return just the street name, nothing else.
+
+Question: {question}
+
+Examples:
+"care a fost cea mai aglomerata zi pe strada Emil Cioran?" → Emil Cioran
+"câte mașini pe Bulevardul Corneliu Coposu azi?" → Bulevardul Corneliu Coposu
+"vârful de trafic pe strada Octavian Goga" → Octavian Goga
+"diferența pe bd. Coposu între azi și ieri" → Coposu
+"pe Goga, câte mașini?" → Goga
+
+Return ONLY the street name (no quotes, no extra text):"""
+    
+    messages = [
+        {"role": "system", "content": "You extract street names from questions. Return ONLY the street name, no explanation, no quotes."},
+        {"role": "user", "content": prompt}
+    ]
+    
+    street = ollama_chat(messages, temperature=0.0).strip().strip('"').strip("'")
+    print(f"📍 Extracted street: '{street}'")
+    return street
+
 # ========================= GENERATE QUERY =========================
-def generate_mongodb_query(question: str) -> Dict[str, Any]:
+def generate_mongodb_query(question: str, street_name: str) -> Dict[str, Any]:
     prompt = f"""{SCHEMA_INFO}
 
 User question: {question}
+Street name: {street_name}
 
 Generate a MongoDB aggregation pipeline as JSON with this structure:
 {{
   "collection": "streets",
-  "operation": "aggregate" or "find",
-  "query": [pipeline] or {{filter}},
-  "explanation": "short Romanian explanation",
-  "recommended_processing": "mongo" or "python"
+  "operation": "aggregate",
+  "query": [pipeline stages],
+  "explanation": "brief Romanian explanation"
 }}
 
 CRITICAL RULES:
-- If question asks about "diferența", "compară", "în ce zi a fost mai aglomerat", "cea mai aglomerată zi" → use "find" + "recommended_processing": "python"
-- For peak hour, hourly list, specific hour → use "aggregate" + $objectToArray
-- Return ONLY valid JSON. No markdown. No extra text.
+- ALWAYS use: {{"$match": {{"name": {{"$regex": "^{street_name}$", "$options": "i"}}}}}} as first stage
+- ALWAYS use aggregation pipelines - return complete pipeline that gives final answer
+- NEVER suggest Python processing - MongoDB must do ALL calculations
+- Return ONLY valid JSON, no markdown, no code blocks
 
 EXAMPLES:
 
-1. "care este diferența între 2025-11-07 și 2025-11-06?" →
-{{
-  "collection": "streets",
-  "operation": "find",
-  "query": {{"name": "Bulevardul Corneliu Coposu"}},
-  "explanation": "Încarc documentul complet pentru calcul diferență în Python",
-  "recommended_processing": "python"
-}}
-
-2. "în ce zi a fost mai aglomerat pe Bulevardul Corneliu Coposu?" →
-{{
-  "collection": "streets",
-  "operation": "find",
-  "query": {{"name": "Bulevardul Corneliu Coposu"}},
-  "explanation": "Găsesc ziua cu totalCars maxim în Python",
-  "recommended_processing": "python"
-}}
-
-3. "la ce oră a fost vârful de trafic azi?" →
+1. "care este diferența între 2025-11-07 și 2025-11-06 pe Emil Cioran?"
 {{
   "collection": "streets",
   "operation": "aggregate",
   "query": [
-    {{"$match": {{"name": "Bulevardul Corneliu Coposu"}}}},
+    {{"$match": {{"name": {{"$regex": "^Emil Cioran$", "$options": "i"}}}}}},
+    {{"$unwind": "$dailyStats"}},
+    {{"$match": {{"dailyStats.date": {{"$in": ["2025-11-07", "2025-11-06"]}}}}}},
+    {{
+      "$group": {{
+        "_id": "$name",
+        "streetName": {{"$first": "$name"}},
+        "total_2025_11_07": {{
+          "$sum": {{
+            "$cond": [{{"$eq": ["$dailyStats.date", "2025-11-07"]}}, "$dailyStats.totalCars", 0]
+          }}
+        }},
+        "total_2025_11_06": {{
+          "$sum": {{
+            "$cond": [{{"$eq": ["$dailyStats.date", "2025-11-06"]}}, "$dailyStats.totalCars", 0]
+          }}
+        }}
+      }}
+    }},
+    {{
+      "$project": {{
+        "_id": 0,
+        "street": "$streetName",
+        "date_2025_11_07": "2025-11-07",
+        "total_2025_11_07": 1,
+        "date_2025_11_06": "2025-11-06",
+        "total_2025_11_06": 1,
+        "difference": {{"$subtract": ["$total_2025_11_07", "$total_2025_11_06"]}}
+      }}
+    }}
+  ],
+  "explanation": "Calculează diferența de mașini între 2025-11-07 și 2025-11-06"
+}}
+
+2. "în ce zi a fost mai aglomerat pe Emil Cioran?"
+{{
+  "collection": "streets",
+  "operation": "aggregate",
+  "query": [
+    {{"$match": {{"name": {{"$regex": "^Emil Cioran$", "$options": "i"}}}}}},
+    {{"$unwind": "$dailyStats"}},
+    {{"$sort": {{"dailyStats.totalCars": -1}}}},
+    {{"$limit": 1}},
+    {{
+      "$project": {{
+        "_id": 0,
+        "street": "$name",
+        "busiest_date": "$dailyStats.date",
+        "total_cars": "$dailyStats.totalCars"
+      }}
+    }}
+  ],
+  "explanation": "Găsește ziua cu cele mai multe mașini"
+}}
+
+3. "la ce oră a fost vârful de trafic azi pe Emil Cioran?"
+{{
+  "collection": "streets",
+  "operation": "aggregate",
+  "query": [
+    {{"$match": {{"name": {{"$regex": "^Emil Cioran$", "$options": "i"}}}}}},
     {{"$unwind": "$dailyStats"}},
     {{"$match": {{"dailyStats.date": "2025-11-07"}}}},
-    {{"$project": {{"hourly": {{"$objectToArray": "$dailyStats.hourlyCarCount"}}}}}},
+    {{"$project": {{"hourly": {{"$objectToArray": "$dailyStats.hourlyCarCount"}}, "street": "$name"}}}},
     {{"$unwind": "$hourly"}},
     {{"$sort": {{"hourly.v": -1}}}},
     {{"$limit": 1}},
-    {{"$project": {{"ora": "$hourly.k", "mașini": "$hourly.v", "_id": 0}}}}
+    {{
+      "$project": {{
+        "_id": 0,
+        "street": "$street",
+        "peak_hour": "$hourly.k",
+        "cars": "$hourly.v"
+      }}
+    }}
   ],
-  "explanation": "Găsesc ora cu cele mai multe mașini pe 2025-11-07",
-  "recommended_processing": "mongo"
+  "explanation": "Găsește ora cu cele mai multe mașini pe 2025-11-07"
 }}
 
-4. "câte mașini au fost ieri la ora 15?" →
+4. "câte mașini au fost ieri la ora 15 pe Emil Cioran?"
 {{
   "collection": "streets",
   "operation": "aggregate",
   "query": [
-    {{"$match": {{"name": "Bulevardul Corneliu Coposu"}}}},
+    {{"$match": {{"name": {{"$regex": "^Emil Cioran$", "$options": "i"}}}}}},
     {{"$unwind": "$dailyStats"}},
     {{"$match": {{"dailyStats.date": "2025-11-06"}}}},
-    {{"$project": {{"mașini": "$dailyStats.hourlyCarCount.15", "_id": 0}}}}
+    {{
+      "$project": {{
+        "_id": 0,
+        "street": "$name",
+        "date": "$dailyStats.date",
+        "hour": "15",
+        "cars": "$dailyStats.hourlyCarCount.15"
+      }}
+    }}
   ],
-  "explanation": "Număr mașini la ora 15 pe 2025-11-06",
-  "recommended_processing": "mongo"
+  "explanation": "Număr mașini la ora 15 pe 2025-11-06"
 }}
 
+5. "câte mașini au fost azi pe Emil Cioran?"
+{{
+  "collection": "streets",
+  "operation": "aggregate",
+  "query": [
+    {{"$match": {{"name": {{"$regex": "^Emil Cioran$", "$options": "i"}}}}}},
+    {{"$unwind": "$dailyStats"}},
+    {{"$match": {{"dailyStats.date": "2025-11-07"}}}},
+    {{
+      "$project": {{
+        "_id": 0,
+        "street": "$name",
+        "date": "$dailyStats.date",
+        "total_cars": "$dailyStats.totalCars"
+      }}
+    }}
+  ],
+  "explanation": "Total mașini pe 2025-11-07"
+}}
+
+Generate the query for street: {street_name}
 Return ONLY the JSON object."""
     
     messages = [
-        {"role": "system", "content": "You are a senior MongoDB engineer. For day comparisons or busiest day → use 'find' + python. For hourly data → use aggregation with $objectToArray. Always return clean JSON."},
+        {"role": "system", "content": f"You are a MongoDB aggregation expert. ALWAYS use street '{street_name}' with case-insensitive regex. ALWAYS return complete aggregation pipelines that calculate everything in MongoDB. NO Python processing. Return only valid JSON."},
         {"role": "user", "content": prompt}
     ]
     
@@ -155,101 +322,133 @@ Return ONLY the JSON object."""
     
     try:
         result = json.loads(content)
-        print(f"AI decided: {result.get('recommended_processing', 'mongo')}")
         return result
     except Exception as e:
-        print(f"Invalid JSON from AI: {e}\nRaw: {content}")
+        print(f"❌ Invalid JSON from AI: {e}")
+        print(f"Raw response: {content}")
         return None
 
 # ========================= EXECUTE QUERY =========================
 def execute_mongodb_query(query_info: Dict) -> Any:
-    collection = db[query_info["collection"]]
-    processing = query_info.get("recommended_processing", "mongo")
-    
-    if processing == "python":
-        doc = collection.find_one(query_info["query"], {"dailyStats": 1, "_id": 0})
-        return [doc] if doc else []
-    
-    if query_info["operation"] == "aggregate":
-        results = list(collection.aggregate(query_info["query"]))
+    try:
+        collection = db[query_info["collection"]]
+        operation = query_info["operation"]
+        query = query_info["query"]
+        
+        if operation == "aggregate":
+            results = list(collection.aggregate(query))
+        elif operation == "find":
+            results = list(collection.find(query))
+        else:
+            results = []
+        
+        # Convert ObjectId to string
         for r in results:
-            if "_id" in r: r["_id"] = str(r["_id"])
+            if "_id" in r and isinstance(r["_id"], ObjectId):
+                r["_id"] = str(r["_id"])
+        
         return results
-    
-    if query_info["operation"] == "find":
-        return list(collection.find(query_info["query"], {"_id": 0}))
-    
-    return []
+    except Exception as e:
+        print(f"❌ Error executing query: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 # ========================= HUMAN RESPONSE =========================
-def generate_human_response(question: str, results: Any) -> str:
+def generate_human_response(question: str, results: Any, street_name: str) -> str:
     if not results:
-        return "Nu am găsit date pentru Bulevardul Corneliu Coposu."
+        return f"Nu am găsit date pentru strada '{street_name}'."
 
-    # Python processing
-    if len(results) == 1 and "dailyStats" in results[0]:
-        stats = results[0]["dailyStats"]
-        totals = {s["date"]: s["totalCars"] for s in stats}
-        q = question.lower()
+    try:
+        prompt = f"""You are a helpful assistant. Based on the user's question and the data from MongoDB, provide a clear, natural response in Romanian.
 
-        if any(w in q for w in ["diferența", "compară", "față de", "între"]):
-            d1, d2 = "2025-11-07", "2025-11-06"
-            t1, t2 = totals.get(d1, 0), totals.get(d2, 0)
-            diff = t1 - t2
-            pct = round(diff / t2 * 100, 1) if t2 else 0
-            return f"**2025-11-07**: {t1} mașini\n**2025-11-06**: {t2} mașini\n\n**Diferența**: {diff:+} mașini ({pct:+.1f}%)"
+User Question: {question}
+Street: {street_name}
 
-        if any(w in q for w in ["în ce zi", "cea mai aglomerată", "mai aglomerat"]):
-            best = max(stats, key=lambda x: x["totalCars"])
-            return f"Cea mai aglomerată zi a fost **{best['date']}** cu **{best['totalCars']} mașini**."
+Database Results: {json.dumps(results, indent=2, ensure_ascii=False)}
 
-    # Mongo processing
-    data = json.dumps(results, indent=2, ensure_ascii=False)
-    prompt = f"Răspunde clar în română:\nÎntrebare: {question}\nDate: {data}"
-    response = ollama_chat([{"role": "user", "content": prompt}], temperature=0.3)
-    return response.strip() or "Am găsit datele."
+Generate a human-friendly response that:
+- Answers the question directly and naturally in Romanian
+- Uses the actual numbers from the results
+- Is conversational and clear
+- For differences, mention both values and the difference with +/- sign
+- For comparisons, state which is higher/lower
+- Include the street name naturally in the response
+
+Return ONLY the response text, no extra formatting."""
+        
+        messages = [
+            {"role": "system", "content": "You provide clear, natural responses in Romanian based on MongoDB query results. Be conversational and direct."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        response = ollama_chat(messages, temperature=0.3)
+        return response.strip() or "Am găsit datele în baza de date."
+    except Exception as e:
+        print(f"❌ Error generating response: {e}")
+        return json.dumps(results, indent=2, ensure_ascii=False)
 
 # ========================= MAIN =========================
 def main():
     print("=" * 70)
-    print("   AI TRAFFIC ASSISTANT - UrbanBike (streets)")
+    print("   AI TRAFFIC ASSISTANT - UrbanBike (MongoDB Aggregation)")
     print("=" * 70)
+    print()
     
-    try:
-        requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
-        print("Ollama connected")
-    except:
-        print("Start Ollama: ollama serve")
+    if not check_ollama_connection():
         return
 
-    print("\nExemple:")
-    print("- la ce oră a fost vârful azi?")
-    print("- câte mașini ieri?")
-    print("- diferența între azi și ieri")
-    print("- în ce zi a fost mai aglomerat?\n")
+    print("\nExemple de întrebări:")
+    print("- la ce oră a fost vârful azi pe Emil Cioran?")
+    print("- câte mașini ieri pe Bulevardul Coposu?")
+    print("- diferența între azi și ieri pe strada Goga")
+    print("- în ce zi a fost mai aglomerat pe Emil Cioran?")
+    print("- câte mașini la ora 15 ieri pe Coposu?")
+    print("\nType 'exit', 'quit', or 'stop' to exit.\n")
 
     while True:
-        q = input("\nÎntrebare: ").strip()
+        q = input("Întrebare: ").strip()
         if q.lower() in ["exit", "quit", "stop"]: 
-            print("Pa!")
+            print("\n👋 Pa!")
             break
-        if not q: continue
-
-        print("AI generează query...")
-        info = generate_mongodb_query(q)
-        if not info:
-            print("Nu am înțeles. Reformulează.")
+        if not q: 
             continue
 
-        print(f"Metodă: {info.get('recommended_processing', 'mongo')}")
-        results = execute_mongodb_query(info)
-        print(f"Rezultate: {len(results)}")
+        print("\n🔍 Extracting street name...")
+        street = extract_street_name(q)
+        if not street:
+            print("❌ Nu am putut identifica strada. Menționează numele străzii în întrebare.\n")
+            continue
 
-        print("\n" + "="*70)
+        print(f"🤖 Generating MongoDB aggregation pipeline...")
+        info = generate_mongodb_query(q, street)
+        if not info:
+            print("❌ Nu am putut genera query-ul. Reformulează întrebarea.\n")
+            continue
+
+        print(f"💡 Explanation: {info.get('explanation', 'N/A')}")
+        print(f"📊 Query details:")
+        print(json.dumps(info['query'], indent=2))
+        print()
+
+        print("⚙️  Executing aggregation pipeline...")
+        results = execute_mongodb_query(info)
+        
+        if results is None:
+            print("❌ Query execution failed.\n")
+            continue
+        
+        print(f"✅ Query executed successfully. Found {len(results)} result(s).")
+        print(f"Results preview: {json.dumps(results, indent=2, ensure_ascii=False)}\n")
+
+        print("💬 Generating natural language response...\n")
+        
+        print("=" * 70)
         print("RĂSPUNS:")
-        print("="*70)
-        print(generate_human_response(q, results))
-        print("="*70)
+        print("=" * 70)
+        print(generate_human_response(q, results, street))
+        print("=" * 70)
+        print()
 
 if __name__ == "__main__":
     main()
