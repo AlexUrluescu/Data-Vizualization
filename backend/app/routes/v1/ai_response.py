@@ -1,5 +1,4 @@
 # app/routes/traffic_routes.py
-from backend.app.config import Config
 from flask import Blueprint, request, jsonify
 import os
 import json
@@ -14,10 +13,17 @@ traffic_routes = Blueprint("traffic_routes", __name__)
 # ========================= CONFIG =========================
 
 
+MONGO_USER="alexurluescu23_db_user"
+MONGO_PASSWORD="y8MDoUisyGf2Gayo"
+MONGO_CLUSTER="cluster0.c9gvi0h.mongodb.net"
+MONGO_DB="urbanbike"
+GOOGLE_API_KEY="AIzaSyBs9DnQ-LEt-M0101Qs9kr3yH3TiR1KjcE"
+
+
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "llama3.1:8b"
 
-MONGO_URI = f"mongodb+srv://{Config.MONGO_USER}:{Config.MONGO_PASSWORD}@{Config.MONGO_CLUSTER}/?retryWrites=true&w=majority&appName={Config.MONGO_DB}"
+MONGO_URI = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_CLUSTER}/?retryWrites=true&w=majority&appName={MONGO_DB}"
 client_mongo = MongoClient(MONGO_URI)
 db = client_mongo.urbanbike
 
