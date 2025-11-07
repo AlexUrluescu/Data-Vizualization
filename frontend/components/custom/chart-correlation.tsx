@@ -44,6 +44,7 @@ export default function ChartCorrelation({
   pollutionData,
 }: IChartCorrelation) {
   const [timeRange, setTimeRange] = React.useState("10y");
+  const [isNormalized, setIsNormalized] = React.useState(false);
 
   // Merge all data by year
   const mergedData = React.useMemo(() => {
@@ -100,6 +101,17 @@ export default function ChartCorrelation({
     return finalData;
   }, [carsData, populationData, parkingData, pollutionData]);
 
+  // Normalization helper function (min-max normalization to 0-100 scale)
+  const normalizeArray = (values: number[]): number[] => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min;
+
+    if (range === 0) return values.map(() => 50); // If all values same, return middle value
+
+    return values.map(val => ((val - min) / range) * 100);
+  };
+
   // Filter by time range
   const filteredData = React.useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -113,6 +125,31 @@ export default function ChartCorrelation({
 
     return mergedData.filter((item) => item.year >= currentYear - yearsToShow);
   }, [mergedData, timeRange]);
+
+  // Normalized data for the first chart
+  const normalizedData = React.useMemo(() => {
+    if (!isNormalized || filteredData.length === 0) return filteredData;
+
+    const carsValues = filteredData.map(d => d.cars);
+    const populationValues = filteredData.map(d => d.population);
+    const parkingValues = filteredData.map(d => d.parking);
+    const pollutionValues = filteredData.map(d => d.pollutionIndex || 0);
+
+    const normalizedCars = normalizeArray(carsValues);
+    const normalizedPopulation = normalizeArray(populationValues);
+    const normalizedParking = normalizeArray(parkingValues);
+    const normalizedPollution = pollutionData && pollutionData.length > 0
+      ? normalizeArray(pollutionValues)
+      : pollutionValues;
+
+    return filteredData.map((item, index) => ({
+      ...item,
+      cars: normalizedCars[index],
+      population: normalizedPopulation[index],
+      parking: normalizedParking[index],
+      pollutionIndex: item.pollutionIndex !== undefined ? normalizedPollution[index] : undefined,
+    }));
+  }, [filteredData, isNormalized, pollutionData]);
 
   // Calculate correlations
   const correlations = React.useMemo(() => {
@@ -142,25 +179,37 @@ export default function ChartCorrelation({
             Comprehensive view of how cars, population, parking, and pollution interact over time
           </CardDescription>
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger
-            className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex"
-            aria-label="Select a value"
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsNormalized(!isNormalized)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+              isNormalized
+                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            <SelectValue placeholder="Last 10 years" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl">
-            <SelectItem value="10y" className="rounded-lg">
-              Last 10 years
-            </SelectItem>
-            <SelectItem value="5y" className="rounded-lg">
-              Last 5 years
-            </SelectItem>
-            <SelectItem value="3y" className="rounded-lg">
-              Last 3 years
-            </SelectItem>
-          </SelectContent>
-        </Select>
+            {isNormalized ? 'Normalized (0-100)' : 'Absolute Values'}
+          </button>
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger
+              className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex"
+              aria-label="Select a value"
+            >
+              <SelectValue placeholder="Last 10 years" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="10y" className="rounded-lg">
+                Last 10 years
+              </SelectItem>
+              <SelectItem value="5y" className="rounded-lg">
+                Last 5 years
+              </SelectItem>
+              <SelectItem value="3y" className="rounded-lg">
+                Last 3 years
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
 
       {/* Key Correlations */}
@@ -211,10 +260,12 @@ export default function ChartCorrelation({
         <div className="space-y-6">
           {/* Main Correlation Chart */}
           <div>
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Absolute Values Comparison</h3>
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
+              {isNormalized ? 'Normalized Values Comparison (0-100 Scale)' : 'Absolute Values Comparison'}
+            </h3>
             <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={filteredData}>
+                <LineChart data={normalizedData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                   <XAxis
                     dataKey="year"
@@ -228,6 +279,7 @@ export default function ChartCorrelation({
                     axisLine={false}
                     tickMargin={8}
                     style={{ fontSize: '12px' }}
+                    label={isNormalized ? { value: 'Normalized (0-100)', angle: -90, position: 'insideLeft' } : undefined}
                   />
                   <Tooltip
                     contentStyle={{
@@ -235,6 +287,9 @@ export default function ChartCorrelation({
                       border: '1px solid #e5e7eb',
                       borderRadius: '8px',
                       padding: '12px',
+                    }}
+                    formatter={(value: number) => {
+                      return isNormalized ? value.toFixed(1) : value.toLocaleString();
                     }}
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
