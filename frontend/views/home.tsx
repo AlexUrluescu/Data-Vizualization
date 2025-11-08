@@ -179,7 +179,6 @@ export default function HomeView({
                 <h2 className="text-3xl font-bold mt-8 mb-4">Air Quality Analysis</h2>
                 <div className="grid grid-cols-1 gap-5">
                   <ChartPollutionTrends pollutionData={pollutionData} />
-                  <ChartPollutionBar pollutionData={pollutionData} />
                 </div>
               </>
             )}
