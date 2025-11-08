@@ -3,7 +3,9 @@ import React, { useEffect, useState } from "react";
 import ChartAreaInteractive from "../components/custom/chart";
 import ChartComparison from "../components/custom/chart-comparison";
 import ChartPieParking from "../components/custom/chart-pie-parking";
-import ChartPollutionTrends, { PollutionData } from "../components/custom/chart-pollution-trends";
+import ChartPollutionTrends, {
+  PollutionData,
+} from "../components/custom/chart-pollution-trends";
 import ChartPollutionBar from "../components/custom/chart-pollution-bar";
 import ChartCorrelation from "../components/custom/chart-correlation";
 import CitiesOptions from "../components/custom/cities-options";
@@ -28,6 +30,7 @@ export type CityCarsChartData = {
   cars?: number;
   population?: number;
   parking?: number;
+  parking?: number;
 };
 
 interface ICitiesOptions {
@@ -45,7 +48,9 @@ export default function HomeView({
   const [cityCarsChartDataParkings, setCityCarsChartDataParkings] = useState<
     CityCarsChartData[] | null
   >(null);
-  const [pollutionData, setPollutionData] = useState<PollutionData[] | null>(null);
+  const [pollutionData, setPollutionData] = useState<PollutionData[] | null>(
+    null
+  );
 
   const chartData = (cityCars: CityCar[] | null) => {
     if (!cityCars) {
@@ -176,7 +181,9 @@ export default function HomeView({
             {/* Pollution Charts */}
             {pollutionData && pollutionData.length > 0 && (
               <>
-                <h2 className="text-3xl font-bold mt-8 mb-4">Air Quality Analysis</h2>
+                <h2 className="text-3xl font-bold mt-8 mb-4">
+                  Air Quality Analysis
+                </h2>
                 <div className="grid grid-cols-1 gap-5">
                   <ChartPollutionTrends pollutionData={pollutionData} />
                 </div>

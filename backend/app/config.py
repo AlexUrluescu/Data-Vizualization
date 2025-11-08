@@ -10,6 +10,8 @@ class Config:
   MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
   MONGO_CLUSTER = os.getenv("MONGO_CLUSTER")
   MONGO_DB = os.getenv("MONGO_DB")
+  OLLAMA_URL = os.getenv("OLLAMA_URL")
+  OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
   
   @staticmethod
   def get_db():

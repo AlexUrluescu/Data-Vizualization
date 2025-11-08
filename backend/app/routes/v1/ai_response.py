@@ -1,4 +1,5 @@
 # app/routes/traffic_routes.py
+from app.config import Config
 from flask import Blueprint, request, jsonify
 import os
 import json
@@ -13,20 +14,7 @@ traffic_routes = Blueprint("traffic_routes", __name__)
 # ========================= CONFIG =========================
 
 
-MONGO_USER="alexurluescu23_db_user"
-MONGO_PASSWORD="y8MDoUisyGf2Gayo"
-MONGO_CLUSTER="cluster0.c9gvi0h.mongodb.net"
-MONGO_DB="urbanbike"
-GOOGLE_API_KEY="AIzaSyBs9DnQ-LEt-M0101Qs9kr3yH3TiR1KjcE"
-
-
-OLLAMA_URL = "http://localhost:11434"
-OLLAMA_MODEL = "llama3.1:8b"
-
-MONGO_URI = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_CLUSTER}/?retryWrites=true&w=majority&appName={MONGO_DB}"
-client_mongo = MongoClient(MONGO_URI)
-db = client_mongo.urbanbike
-
+db = Config.get_db()
 # ========================= SCHEMA INFO =========================
 SCHEMA_INFO = """
 Database: urbanbike
@@ -65,9 +53,9 @@ IMPORTANT RULES FOR QUERY GENERATION:
 
 # ========================= OLLAMA =========================
 def ollama_chat(messages: List[Dict], temperature: float = 0.0) -> str:
-    url = f"{OLLAMA_URL}/api/chat"
+    url = f"{Config.OLLAMA_URL}/api/chat"
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": Config.OLLAMA_MODEL,
         "messages": messages,
         "stream": False,
         "options": {"temperature": temperature, "num_ctx": 12888}

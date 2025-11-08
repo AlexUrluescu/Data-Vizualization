@@ -27,7 +27,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CityCarsChartData } from "../../views/home";
-import { calculateChartMetrics, formatNumber, formatPercent } from "@/lib/utils";
+import {
+  calculateChartMetrics,
+  formatNumber,
+  formatPercent,
+} from "@/lib/utils";
 
 const chartConfig = {
   cars: {
@@ -38,18 +42,24 @@ const chartConfig = {
     label: "Population",
     color: "hsl(var(--chart-2))",
   },
+  parking: {
+    label: "Parking",
+    color: "hsl(var(--chart-2))",
+  },
 } satisfies ChartConfig;
 
 interface IChartAreaInteractive {
   cityCarsState: CityCarsChartData[];
   title: string;
   type: "cars" | "population" | "parking";
+  flex: boolean;
 }
 
 export default function ChartAreaInteractive({
   cityCarsState,
   title,
   type,
+  flex,
 }: IChartAreaInteractive) {
   const [timeRange, setTimeRange] = React.useState("10y");
 
@@ -101,13 +111,19 @@ export default function ChartAreaInteractive({
   const metrics = calculateChartMetrics(filteredData);
 
   const TrendIcon =
-    metrics?.trend === "up" ? TrendingUp :
-    metrics?.trend === "down" ? TrendingDown : Minus;
+    metrics?.trend === "up"
+      ? TrendingUp
+      : metrics?.trend === "down"
+      ? TrendingDown
+      : Minus;
 
   // Get starting value from filtered data
-  const startingValue = filteredData.length > 0
-    ? Object.values(filteredData[0]).find(v => typeof v === "number" && v !== filteredData[0].year) || 0
-    : 0;
+  const startingValue =
+    filteredData.length > 0
+      ? Object.values(filteredData[0]).find(
+          (v) => typeof v === "number" && v !== filteredData[0].year
+        ) || 0
+      : 0;
 
   return (
     <Card className="pt-0 transition-all duration-300 hover:shadow-lg">
@@ -143,37 +159,67 @@ export default function ChartAreaInteractive({
       {metrics && (
         <div className="grid grid-cols-2 gap-3 px-4 py-4 bg-muted/50 border-b sm:gap-4 sm:px-6 lg:grid-cols-4">
           <div className="space-y-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium truncate">Latest ({filteredData[filteredData.length - 1]?.year})</p>
-            <p className="text-xl font-bold sm:text-2xl truncate">{formatNumber(metrics.total)}</p>
+            <p className="text-xs text-muted-foreground font-medium truncate">
+              Latest ({filteredData[filteredData.length - 1]?.year})
+            </p>
+            <p className="text-xl font-bold sm:text-2xl truncate">
+              {formatNumber(metrics.total)}
+            </p>
           </div>
           <div className="space-y-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium truncate">Starting ({filteredData[0]?.year})</p>
-            <p className="text-xl font-bold text-muted-foreground sm:text-2xl truncate">{formatNumber(startingValue)}</p>
+            <p className="text-xs text-muted-foreground font-medium truncate">
+              Starting ({filteredData[0]?.year})
+            </p>
+            <p className="text-xl font-bold text-muted-foreground sm:text-2xl truncate">
+              {formatNumber(startingValue)}
+            </p>
           </div>
           <div className="space-y-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium truncate">Net Change</p>
+            <p className="text-xs text-muted-foreground font-medium truncate">
+              Net Change
+            </p>
             <div className="flex flex-col gap-1">
-              <p className={`text-xl font-bold sm:text-2xl whitespace-nowrap ${
-                metrics.trend === "up" ? "text-green-600" :
-                metrics.trend === "down" ? "text-red-600" : "text-gray-600"
-              }`}>
+              <p
+                className={`text-xl font-bold sm:text-2xl whitespace-nowrap ${
+                  metrics.trend === "up"
+                    ? "text-green-600"
+                    : metrics.trend === "down"
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`}
+              >
                 {formatPercent(metrics.changePercent)}
               </p>
-              <div className={`flex items-center gap-1 text-xs font-semibold ${
-                metrics.trend === "up" ? "text-green-600" :
-                metrics.trend === "down" ? "text-red-600" : "text-gray-600"
-              }`}>
+              <div
+                className={`flex items-center gap-1 text-xs font-semibold ${
+                  metrics.trend === "up"
+                    ? "text-green-600"
+                    : metrics.trend === "down"
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`}
+              >
                 <TrendIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="whitespace-nowrap">{metrics.change >= 0 ? "+" : ""}{formatNumber(metrics.change)}</span>
+                <span className="whitespace-nowrap">
+                  {metrics.change >= 0 ? "+" : ""}
+                  {formatNumber(metrics.change)}
+                </span>
               </div>
             </div>
           </div>
           <div className="space-y-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium truncate">Avg. Annual Growth</p>
-            <p className={`text-xl font-bold sm:text-2xl ${
-              metrics.trend === "up" ? "text-green-600" :
-              metrics.trend === "down" ? "text-red-600" : "text-gray-600"
-            }`}>
+            <p className="text-xs text-muted-foreground font-medium truncate">
+              Avg. Annual Growth
+            </p>
+            <p
+              className={`text-xl font-bold sm:text-2xl ${
+                metrics.trend === "up"
+                  ? "text-green-600"
+                  : metrics.trend === "down"
+                  ? "text-red-600"
+                  : "text-gray-600"
+              }`}
+            >
               {formatPercent(metrics.growthRate)}
             </p>
           </div>
@@ -188,9 +234,19 @@ export default function ChartAreaInteractive({
           <AreaChart data={filteredData}>
             <defs>
               {/* Dynamic gradient based on chart type */}
-              <linearGradient id={`gradient-${type}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient
+                id={`gradient-${type}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
                 <stop offset="0%" stopColor={colors.start} stopOpacity={0.8} />
-                <stop offset="50%" stopColor={colors.middle} stopOpacity={0.6} />
+                <stop
+                  offset="50%"
+                  stopColor={colors.middle}
+                  stopOpacity={0.6}
+                />
                 <stop offset="100%" stopColor={colors.end} stopOpacity={0.4} />
               </linearGradient>
             </defs>

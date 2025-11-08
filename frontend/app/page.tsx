@@ -1,3 +1,4 @@
+import ChatWithAIHome from "@/components/custom/chat-ai2";
 import { cn } from "@/lib/utils";
 import HomeView from "@/views/home";
 
@@ -35,6 +36,8 @@ export default async function Home() {
             </h1>
           </div>
         </div>
+
+        <ChatWithAIHome />
 
         <HomeView citiesEntities={cities} />
       </div>

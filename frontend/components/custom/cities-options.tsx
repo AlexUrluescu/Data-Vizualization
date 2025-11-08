@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 enum CityType {
   ALL_CITIES = "All",
@@ -41,6 +41,10 @@ export default function CitiesOptions({
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
   const [cities, setCities] = useState<City[]>(citiesEntities);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCarsByCityId("6908d624c8c026b45976c717");
+  }, []);
 
   async function getCarsByCityId(cityId: string) {
     const res = await fetch(
@@ -165,12 +169,12 @@ export default function CitiesOptions({
 
   return (
     <div className="flex flex-col items-center gap-10">
-      <Input
+      {/* <Input
         onChange={handleInputSearch}
         className="w-4/5 h-11 bg-white"
         type="email"
         placeholder="City"
-      />
+      /> */}
 
       {/* <div
         style={{
@@ -224,7 +228,7 @@ export default function CitiesOptions({
         </Button>
       </div> */}
 
-      <div className="flex justify-center gap-4 flex-wrap">
+      {/* <div className="flex justify-center gap-4 flex-wrap">
         {cities.length > 0 ? (
           cities.map((city) => (
             <Button
@@ -243,7 +247,7 @@ export default function CitiesOptions({
         ) : (
           <div style={{ padding: 50 }}>No available city</div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 }
