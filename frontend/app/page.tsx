@@ -37,8 +37,6 @@ export default async function Home() {
           </div>
         </div>
 
-        <ChatWithAIHome />
-
         <HomeView citiesEntities={cities} />
       </div>
     </div>

@@ -254,7 +254,7 @@ const SibiuTrafficMap: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <select
+              {/* <select
                 value={currentHour}
                 onChange={(e) => setCurrentHour(parseInt(e.target.value))}
                 className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
@@ -264,14 +264,14 @@ const SibiuTrafficMap: React.FC = () => {
                     {i.toString().padStart(2, "0")}:00
                   </option>
                 ))}
-              </select>
-              <button
+              </select> */}
+              {/* <button
                 onClick={updateTrafficData}
                 disabled={loading}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg shadow-sm transition flex items-center gap-2"
               >
                 {loading ? <>Updating...</> : <>Refresh Data</>}
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
