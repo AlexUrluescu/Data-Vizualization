@@ -5,7 +5,7 @@ async function getCities() {
   const apiUrl = process.env.API_URL || "http://localhost:3000";
 
   try {
-    const res = await fetch(`${apiUrl}/api/cities`, {
+    const res = await fetch(`${apiUrl}/api/v1/cities`, {
       next: { revalidate: 3600 },
     });
 
