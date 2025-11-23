@@ -1,12 +1,24 @@
-import ChatWithAIHome from "@/components/custom/chat-ai2";
 import { cn } from "@/lib/utils";
 import HomeView from "@/views/home";
 
 async function getCities() {
-  const res = await fetch("http://127.0.0.1:5001/api/v1/cities");
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-  if (!res.ok) throw new Error("Failed to fetch");
-  return res.json();
+  try {
+    const res = await fetch(`${apiUrl}/api/cities`, {
+      next: { revalidate: 3600 },
+    });
+
+    if (!res.ok) {
+      console.error("Failed to fetch cities");
+      return [];
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    return [];
+  }
 }
 
 export default async function Home() {
@@ -17,6 +29,7 @@ export default async function Home() {
   );
 
   const isMobile = false;
+
   return (
     <div className="h-full p-6 sm:p-12 lg:p-16">
       <div className="flex flex-col gap-12 sm:gap-20 lg:gap-24">

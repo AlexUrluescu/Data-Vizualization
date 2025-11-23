@@ -15,10 +15,23 @@ interface MockData {
 }
 
 async function getCities() {
-  const res = await fetch("http://127.0.0.1:5001/api/v1/cities");
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-  if (!res.ok) throw new Error("Failed to fetch");
-  return res.json();
+  try {
+    const res = await fetch(`${apiUrl}/api/cities`, {
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    });
+
+    if (!res.ok) {
+      console.error("Failed to fetch cities");
+      return [];
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    return [];
+  }
 }
 
 export default async function Urban() {
