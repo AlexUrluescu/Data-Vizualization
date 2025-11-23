@@ -6,6 +6,7 @@ from app.routes.v1.population_routes import population_routes
 from app.routes.v1.pollution_routes import pollution_routes
 from app.routes.v1.ai_response import traffic_routes
 from app.routes.v1.parking_spots_routes import parking_spots_routes
+from app.routes.v1.home_ai_response import traffic_routes_home
 
 def create_app():
   app = Flask(__name__)
@@ -20,5 +21,6 @@ def create_app():
   app.register_blueprint(pollution_routes, url_prefix='/api/v1/pollution')
   app.register_blueprint(traffic_routes, url_prefix="/api/v1/traffic-chat-bot")
   app.register_blueprint(parking_spots_routes, url_prefix='/api/v1/parking_spots')
+  app.register_blueprint(traffic_routes_home, url_prefix="/api/v1/traffic-chat-bot-home")
 
   return app
