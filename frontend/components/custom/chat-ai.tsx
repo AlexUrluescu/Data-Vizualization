@@ -134,8 +134,6 @@ export default function ChatWithAI({}: ChatWithAIProps) {
                 "câte mașini au trecut azi?",
                 "la ce oră a fost cel mai aglomerat?",
                 "diferența între azi și ieri",
-                "în ce zi a fost mai aglomerat?",
-                "arată-mi traficul orar azi",
               ].map((ex, i) => (
                 <button
                   key={i}
@@ -221,7 +219,7 @@ export default function ChatWithAI({}: ChatWithAIProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ex: câte mașini azi la ora 15?"
+            placeholder="Type your question ..."
             disabled={loading}
             className="flex-1 px-5 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-gray-800 font-medium"
           />

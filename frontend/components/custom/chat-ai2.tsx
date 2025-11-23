@@ -49,7 +49,7 @@ export default function ChatWithAIHome({}: ChatWithAIProps) {
       const API_URL =
         process.env.NODE_ENV === "production"
           ? "/api/traffic/ask"
-          : "http://localhost:5001/api/v1/traffic-chat-bot/ask";
+          : "http://localhost:5001/api/v1/traffic-chat-bot-home/ask";
 
       console.log("userMessage", userMessage);
 
@@ -137,11 +137,9 @@ export default function ChatWithAIHome({}: ChatWithAIProps) {
               //   className="mt-6 space-y-3 max-w-2xl mx-auto text-left"
             >
               {[
-                "câte mașini au trecut azi?",
-                "la ce oră a fost cel mai aglomerat?",
-                "diferența între azi și ieri",
-                "în ce zi a fost mai aglomerat?",
-                "arată-mi traficul orar azi",
+                "cate masini au fost in anul 2014 in Sibiu?",
+                "cu cat a crescut populatia din Sibiu din 2014 pana in 2023?",
+                "cate parcari au fost construite in 2022?",
               ].map((ex, i) => (
                 <button
                   key={i}
@@ -228,7 +226,7 @@ export default function ChatWithAIHome({}: ChatWithAIProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ex: câte mașini azi la ora 15?"
+            placeholder="Type your question ..."
             disabled={loading}
             style={{ paddingTop: 10, paddingBottom: 10 }}
             className="flex-1 px-5  border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-gray-800 font-medium"

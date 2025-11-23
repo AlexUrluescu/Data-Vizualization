@@ -32,7 +32,7 @@ export default async function Home() {
             )}
           >
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold">
-              Urban Bike
+              Urban.ai
             </h1>
           </div>
         </div>
