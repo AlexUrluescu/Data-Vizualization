@@ -47,12 +47,10 @@ export default function CitiesOptions({
   }, []);
 
   async function getCarsByCityId(cityId: string) {
-    const res = await fetch(
-      `http://localhost:5001/api/v1/cars?cityId=${cityId}`,
-      {
-        cache: "no-store",
-      }
-    );
+    const apiUrl = process.env.API_URL || "http://localhost:5001";
+    const res = await fetch(`${apiUrl}/api/v1/cars?cityId=${cityId}`, {
+      cache: "no-store",
+    });
 
     if (!res.ok) {
       throw new Error("Failed to fetch cars");
@@ -60,12 +58,9 @@ export default function CitiesOptions({
 
     const data = await res.json();
 
-    const res2 = await fetch(
-      `http://localhost:5001/api/v1/population?cityId=${cityId}`,
-      {
-        cache: "no-store",
-      }
-    );
+    const res2 = await fetch(`${apiUrl}/api/v1/population?cityId=${cityId}`, {
+      cache: "no-store",
+    });
 
     if (!res.ok) {
       throw new Error("Failed to fetch cars");
@@ -76,7 +71,7 @@ export default function CitiesOptions({
     console.log("data2", data2);
 
     const res3 = await fetch(
-      `http://localhost:5001/api/v1/parking_spots?cityId=${cityId}`,
+      `${apiUrl}/api/v1/parking_spots?cityId=${cityId}`,
       {
         cache: "no-store",
       }
