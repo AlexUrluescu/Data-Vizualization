@@ -10,7 +10,7 @@ async function getCities() {
     });
 
     if (!res.ok) {
-      console.error("Failed to fetch cities");
+      console.error("Failed to fetch cities error");
       return [];
     }
 
