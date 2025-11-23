@@ -1,6 +1,4 @@
 "use client";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import React, { useEffect, useState } from "react";
 
 enum CityType {
@@ -47,7 +45,7 @@ export default function CitiesOptions({
   }, []);
 
   async function getCarsByCityId(cityId: string) {
-    const apiUrl = process.env.API_URL || "http://localhost:5001";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
     const res = await fetch(`${apiUrl}/api/v1/cars?cityId=${cityId}`, {
       cache: "no-store",
     });

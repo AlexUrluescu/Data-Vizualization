@@ -46,7 +46,7 @@ export default function ChatWithAI({}: ChatWithAIProps) {
 
     try {
       // Folosește proxy-ul din next.config.js sau direct localhost
-      const apiUrl = process.env.API_URL || "http://localhost:5001";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
       const API_URL =
         process.env.NODE_ENV === "production"
           ? "/api/traffic/ask"
