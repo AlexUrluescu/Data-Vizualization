@@ -52,8 +52,6 @@ export default function ChatWithAIHome({}: ChatWithAIProps) {
           ? "/api/traffic/ask"
           : `${apiUrl}/api/v1/traffic-chat-bot-home/ask`;
 
-      console.log("userMessage", userMessage);
-
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {

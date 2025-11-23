@@ -121,10 +121,6 @@ export default function HomeView({
     setPollutionData(pollutionChartData);
   };
 
-  useEffect(() => {
-    console.log("cityCarsChartDataPopulation", cityCarsChartDataPopulation);
-  }, [cityCarsChartDataPopulation]);
-
   return (
     <div className="flex flex-col gap-10">
       <ChatWithAIHome />

@@ -68,8 +68,6 @@ export default function CitiesOptions({
 
     const data2 = await res2.json();
 
-    console.log("data2", data2);
-
     const res3 = await fetch(
       `${apiUrl}/api/v1/parking_spots?cityId=${cityId}`,
       {
@@ -83,8 +81,6 @@ export default function CitiesOptions({
 
     const data3 = await res3.json();
 
-    console.log("data3", data3);
-
     let data4 = null;
     if (chartDataPollution) {
       try {
@@ -97,8 +93,6 @@ export default function CitiesOptions({
 
         if (res4.ok) {
           data4 = await res4.json();
-          console.log("✅ Pollution data fetched:", data4);
-          console.log("✅ Pollution data length:", data4?.length || 0);
         } else {
           console.warn(
             "⚠️ Pollution API status:",
