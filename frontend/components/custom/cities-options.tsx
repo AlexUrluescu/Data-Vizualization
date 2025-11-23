@@ -28,7 +28,6 @@ interface ICitiesOptions {
   chartData: (cityCars: CityCar[] | null) => void;
   chartDataPopulation: (cityCars: CityCar[] | null) => void;
   chartDataParkings: (cityCars: CityCar[] | null) => void;
-  chartDataPollution?: (pollution: any[] | null) => void;
 }
 
 export default function CitiesOptions({
@@ -36,7 +35,6 @@ export default function CitiesOptions({
   chartData,
   chartDataPopulation,
   chartDataParkings,
-  chartDataPollution,
 }: ICitiesOptions): React.ReactElement {
   const [cityType, setCityType] = useState<CityType>(CityType.ALL_CITIES);
   const [cities, setCities] = useState<City[]>(citiesEntities);
@@ -48,7 +46,7 @@ export default function CitiesOptions({
 
   async function getCarsByCityId(cityId: string) {
     const res = await fetch(
-      `http://127.0.0.1:5001/api/v1/cars?cityId=${cityId}`,
+      `http://localhost:5001/api/v1/cars?cityId=${cityId}`,
       {
         cache: "no-store",
       }
@@ -61,72 +59,45 @@ export default function CitiesOptions({
     const data = await res.json();
 
     const res2 = await fetch(
-      `http://127.0.0.1:5001/api/v1/population?cityId=${cityId}`,
+      `http://localhost:5001/api/v1/population?cityId=${cityId}`,
       {
         cache: "no-store",
       }
     );
 
-    if (!res2.ok) {
-      throw new Error("Failed to fetch population");
+    if (!res.ok) {
+      throw new Error("Failed to fetch cars");
     }
 
     const data2 = await res2.json();
 
-    console.log("✅ Population data:", data2);
+    console.log("data2", data2);
 
     const res3 = await fetch(
-      `http://127.0.0.1:5001/api/v1/parking_spots?cityId=${cityId}`,
+      `http://localhost:5001/api/v1/parking_spots?cityId=${cityId}`,
       {
         cache: "no-store",
       }
     );
 
-    if (!res3.ok) {
-      throw new Error("Failed to fetch parking spots");
+    if (!res.ok) {
+      throw new Error("Failed to fetch cars");
     }
 
     const data3 = await res3.json();
 
-    console.log("✅ Parking data:", data3);
-
-    // Fetch pollution data if the handler is provided
-    let data4 = null;
-    if (chartDataPollution) {
-      try {
-        const res4 = await fetch(
-          `http://127.0.0.1:5001/api/v1/pollution?cityId=${cityId}`,
-          {
-            cache: "no-store",
-          }
-        );
-
-        if (res4.ok) {
-          data4 = await res4.json();
-          console.log("✅ Pollution data fetched:", data4);
-          console.log("✅ Pollution data length:", data4?.length || 0);
-        } else {
-          console.warn("⚠️ Pollution API status:", res4.status, await res4.text());
-        }
-      } catch (error) {
-        console.error("❌ Error fetching pollution data:", error);
-      }
-    } else {
-      console.log("ℹ️ chartDataPollution handler not provided");
-    }
+    console.log("data3", data3);
 
     if (selectedCityId === cityId) {
       setSelectedCityId(null);
       chartData(null);
       chartDataPopulation(null);
       chartDataParkings(null);
-      if (chartDataPollution) chartDataPollution(null);
     } else {
       setSelectedCityId(cityId);
       chartData(data);
       chartDataPopulation(data2);
       chartDataParkings(data3);
-      if (chartDataPollution) chartDataPollution(data4);
     }
   }
 
@@ -236,7 +207,7 @@ export default function CitiesOptions({
                 background: selectedCityId === city._id ? "orange" : "#ededed",
                 color: selectedCityId === city._id ? "white" : "black",
               }}
-              onClick={() => getCarsByCityId(city._id)}
+              onClick={() => getCarsByCityId("6908d624c8c026b45976c717")}
               key={city._id}
               className="min-w-[10%] transition-all duration-200 hover:brightness-105"
               variant={"outline"}

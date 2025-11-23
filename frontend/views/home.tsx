@@ -1,13 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import ChartAreaInteractive from "../components/custom/chart";
-import ChartComparison from "../components/custom/chart-comparison";
-import ChartPieParking from "../components/custom/chart-pie-parking";
-import ChartPollutionTrends, {
-  PollutionData,
-} from "../components/custom/chart-pollution-trends";
-import ChartPollutionBar from "../components/custom/chart-pollution-bar";
-import ChartCorrelation from "../components/custom/chart-correlation";
 import CitiesOptions from "../components/custom/cities-options";
 import SibiuTrafficMap from "@/components/custom/map";
 
@@ -30,7 +23,6 @@ export type CityCarsChartData = {
   cars?: number;
   population?: number;
   parking?: number;
-  parking?: number;
 };
 
 interface ICitiesOptions {
@@ -48,9 +40,6 @@ export default function HomeView({
   const [cityCarsChartDataParkings, setCityCarsChartDataParkings] = useState<
     CityCarsChartData[] | null
   >(null);
-  const [pollutionData, setPollutionData] = useState<PollutionData[] | null>(
-    null
-  );
 
   const chartData = (cityCars: CityCar[] | null) => {
     if (!cityCars) {
@@ -100,25 +89,6 @@ export default function HomeView({
     setCityCarsChartDataParkings(populationData);
   };
 
-  const chartDataPollution = (pollution: any[] | null) => {
-    if (!pollution) {
-      setPollutionData(null);
-      return;
-    }
-
-    const pollutionChartData: PollutionData[] = pollution
-      .map((data) => {
-        const { year, _id, cityId, ...metrics } = data;
-        return {
-          year,
-          ...metrics,
-        };
-      })
-      .sort((a, b) => a.year - b.year);
-
-    setPollutionData(pollutionChartData);
-  };
-
   useEffect(() => {
     console.log("cityCarsChartDataPopulation", cityCarsChartDataPopulation);
   }, [cityCarsChartDataPopulation]);
@@ -130,7 +100,6 @@ export default function HomeView({
         chartData={chartData}
         chartDataPopulation={chartDataPopulation}
         chartDataParkings={chartDataParkings}
-        chartDataPollution={chartDataPollution}
       />
 
       {/* Render charts only if both datasets are available */}
@@ -138,57 +107,27 @@ export default function HomeView({
         cityCarsChartDataPopulation &&
         cityCarsChartDataParkings && (
           <div className="flex flex-col gap-5">
-            {/* Comprehensive Correlation Chart */}
-            <ChartCorrelation
-              carsData={cityCarsChartData}
-              populationData={cityCarsChartDataPopulation}
-              parkingData={cityCarsChartDataParkings}
-              pollutionData={pollutionData}
+            <ChartAreaInteractive
+              flex={false}
+              title="Cars"
+              cityCarsState={cityCarsChartData}
+              type="cars"
             />
 
-            {/* Comparison Chart - Shows relationship between cars and population */}
-            <ChartComparison
-              carsData={cityCarsChartData}
-              populationData={cityCarsChartDataPopulation}
-            />
-
-            {/* Individual Charts */}
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div style={{ display: "flex", gap: 20 }}>
               <ChartAreaInteractive
-                title="Cars"
-                cityCarsState={cityCarsChartData}
-                type="cars"
-              />
-              <ChartAreaInteractive
+                flex={true}
                 title="Population"
                 cityCarsState={cityCarsChartDataPopulation}
                 type="population"
               />
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <ChartAreaInteractive
-                title="Parking Spots"
+                flex={true}
+                title="Parking"
                 cityCarsState={cityCarsChartDataParkings}
                 type="parking"
               />
-              <ChartPieParking
-                carsData={cityCarsChartData}
-                parkingData={cityCarsChartDataParkings}
-              />
             </div>
-
-            {/* Pollution Charts */}
-            {pollutionData && pollutionData.length > 0 && (
-              <>
-                <h2 className="text-3xl font-bold mt-8 mb-4">
-                  Air Quality Analysis
-                </h2>
-                <div className="grid grid-cols-1 gap-5">
-                  <ChartPollutionTrends pollutionData={pollutionData} />
-                </div>
-              </>
-            )}
           </div>
         )}
     </div>
