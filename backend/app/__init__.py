@@ -12,7 +12,7 @@ def create_app():
   app = Flask(__name__)
   
   # Allow all headers & methods for CORS
-  CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+  CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://data-vizualization-hkr3.vercel.app"]}})
 
   # Register routes
   app.register_blueprint(car_routes, url_prefix='/api/v1/cars')
