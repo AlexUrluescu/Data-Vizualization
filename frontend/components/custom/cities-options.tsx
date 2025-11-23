@@ -46,6 +46,9 @@ export default function CitiesOptions({
 
   async function getCarsByCityId(cityId: string) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
+    console.log("apiUrl", apiUrl);
+
     const res = await fetch(`${apiUrl}/api/v1/cars?cityId=${cityId}`, {
       cache: "no-store",
     });
