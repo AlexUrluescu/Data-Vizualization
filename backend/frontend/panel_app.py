@@ -9,7 +9,7 @@ def create_app():
     slider = pn.widgets.IntSlider(name='Select a Number', start=1, end=100, value=50)
     color_picker = pn.widgets.ColorPicker(name='Pick a Color', value='#007bff')
 
-    m = folium.Map(location=[52.51, 13.39], zoom_start=12)
+    m = folium.Map(location=[45.7983, 24.1256], zoom_start=12)
 
     folium_pane = pn.pane.plot.Folium(m, height=400)
 
