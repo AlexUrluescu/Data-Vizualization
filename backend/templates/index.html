@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Flask with Panel Components</title>
+  </head>
+  <body style="margin: 0px; padding: 0px">
+    <nav style="background: #333; color: white; padding: 10px">
+      My Flask Navbar
+    </nav>
+
+    <div class="container" style="margin: 20px">
+      <h1>Analytics Page</h1>
+      <p>This part is standard HTML served by Flask.</p>
+
+      <div id="panel-root" style="border: 1px solid #ddd; padding: 20px">
+        {{ panel_script|safe }}
+      </div>
+    </div>
+  </body>
+</html>
