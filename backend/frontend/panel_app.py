@@ -3,11 +3,16 @@ import threading
 import folium
 import altair as alt
 import pandas as pd
+import io
+
 
 def render_dashboard_page():
     # --- WIDGETS (Inputs) ---
     # See: https://panel.holoviz.org/reference/index.html#widgets
     pn.extension('vega')
+    admin_btn = pn.widgets.Button(name='Go to Admin', button_type='primary', width=100)
+    admin_btn.js_on_click(code="window.location.href = '/admin'")
+
     title_input = pn.widgets.TextInput(name='Title', value='My Dashboard')
     slider = pn.widgets.IntSlider(name='Select a Number', start=1, end=100, value=50)
     color_picker = pn.widgets.ColorPicker(name='Pick a Color', value='#007bff')
@@ -57,6 +62,7 @@ def render_dashboard_page():
     # We organize components into Rows and Columns
     layout = pn.Column(
         pn.Row(title_input, color_picker),
+        admin_btn,
         slider,
         folium_pane,
         pn.layout.Divider(),
@@ -68,11 +74,34 @@ def render_dashboard_page():
     return layout       
 
 def render_admin_page():
+    pn.extension()
+    pn.extension('tabulator')
+
+    upload_widget = pn.widgets.FileInput(accept='.xlsx', name='Upload Excel')
+    admin_btn = pn.widgets.Button(name='Go to Dashboard', button_type='primary', width=100)
+    admin_btn.js_on_click(code="window.location.href = '/'")
     m = folium.Map(location=[45.7983, 24.1256], zoom_start=12)
     folium_pane = pn.pane.plot.Folium(m, height=400)
 
+    @pn.depends(upload_widget.param.value)
+    def process_excel(file_content):
+        if file_content is None:
+            return pn.pane.Markdown("### 📂 Please upload an Excel file to see the data.")
+        
+        try:
+            df = pd.read_excel(io.BytesIO(file_content))
+        
+            return pn.widgets.Tabulator(df, pagination='remote', page_size=10, height=400)
+            
+        except Exception as e:
+            return pn.pane.Alert(f"Error reading file: {str(e)}", alert_type='danger')
+
     layout = pn.Column(
+        admin_btn,
         folium_pane,
+        upload_widget,
+        pn.layout.Divider(),
+        process_excel
     
     )
 
