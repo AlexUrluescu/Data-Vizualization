@@ -4,6 +4,7 @@ import folium
 import altair as alt
 import pandas as pd
 import io
+import datetime as dt
 
 
 def render_dashboard_page():
@@ -14,7 +15,9 @@ def render_dashboard_page():
     admin_btn.js_on_click(code="window.location.href = '/admin'")
 
     title_input = pn.widgets.TextInput(name='Title', value='My Dashboard')
-    slider = pn.widgets.IntSlider(name='Select a Number', start=1, end=100, value=50)
+    datetime_picker = pn.widgets.DatetimePicker(
+    name='Datetime Picker', value=dt.datetime(2021, 3, 2, 12, 10)
+)
 
     m = folium.Map(location=[45.7983, 24.1256], zoom_start=12)
 
@@ -55,7 +58,7 @@ def render_dashboard_page():
     layout = pn.Column(
         pn.Row(title_input),
         admin_btn,
-        slider,
+        datetime_picker,
         folium_pane,
         pn.layout.Divider(),
         chart,
