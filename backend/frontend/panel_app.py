@@ -15,7 +15,6 @@ def render_dashboard_page():
 
     title_input = pn.widgets.TextInput(name='Title', value='My Dashboard')
     slider = pn.widgets.IntSlider(name='Select a Number', start=1, end=100, value=50)
-    color_picker = pn.widgets.ColorPicker(name='Pick a Color', value='#007bff')
 
     m = folium.Map(location=[45.7983, 24.1256], zoom_start=12)
 
@@ -49,39 +48,28 @@ def render_dashboard_page():
     # --- PANES (Outputs) ---
     # See: https://panel.holoviz.org/reference/index.html#panes
     # We bind the output to the widgets so it updates automatically
-    @pn.depends(slider, color_picker)
-    def update_result(val, color):
-            return pn.pane.Markdown(
-                f"# You selected: {val}", 
-            
-                styles={'color': color, 'font-family': 'Arial'}
-            )
 
     # --- LAYOUT (Arrangement) ---
     # See: https://panel.holoviz.org/reference/index.html#layouts
     # We organize components into Rows and Columns
     layout = pn.Column(
-        pn.Row(title_input, color_picker),
+        pn.Row(title_input),
         admin_btn,
         slider,
         folium_pane,
         pn.layout.Divider(),
         chart,
         pn.layout.Divider(),
-        update_result
     )
 
     return layout       
 
 def render_admin_page():
-    pn.extension()
     pn.extension('tabulator')
 
     upload_widget = pn.widgets.FileInput(accept='.xlsx', name='Upload Excel')
     admin_btn = pn.widgets.Button(name='Go to Dashboard', button_type='primary', width=100)
     admin_btn.js_on_click(code="window.location.href = '/'")
-    m = folium.Map(location=[45.7983, 24.1256], zoom_start=12)
-    folium_pane = pn.pane.plot.Folium(m, height=400)
 
     @pn.depends(upload_widget.param.value)
     def process_excel(file_content):
@@ -90,22 +78,36 @@ def render_admin_page():
         
         try:
             df = pd.read_excel(io.BytesIO(file_content))
-        
+
+            print("\n" + "="*40)
+            print("🚗 CAR STATISTICS REPORT")
+            print("="*40)
+
+            for index, row in df.iterrows():
+                city_name = row.iloc[0] 
+                print(f"\n🏙️  City: {city_name}")
+                
+                for year_column in df.columns[1:]:
+                    car_count = row[year_column]
+                    print(f"   📅 Year {year_column}: {car_count} cars")
+
+            print("\n" + "="*40 + "\n")
+
             return pn.widgets.Tabulator(df, pagination='remote', page_size=10, height=400)
             
         except Exception as e:
+            print(f"Error: {e}")
             return pn.pane.Alert(f"Error reading file: {str(e)}", alert_type='danger')
+        
 
     layout = pn.Column(
         admin_btn,
-        folium_pane,
         upload_widget,
         pn.layout.Divider(),
         process_excel
-    
     )
 
-    return layout       
+    return layout   
 
 
 def run_panel_server():
