@@ -1,71 +1,200 @@
 import panel as pn
-import threading
 import folium
 import altair as alt
 import pandas as pd
-import io
 import datetime as dt
+import random
+import threading
+import numpy as np
 
+senzori = [
+    {
+        "name": "Senzor Piața Mare",
+        "lat": 45.7973,     
+        "lon": 24.1521,
+        "status": "Activ",
+        "value": 22.0       
+    },
+    {
+        "name": "Senzor Zona Industrială Vest",
+        "lat": 45.7950,
+        "lon": 24.1100,
+        "status": "Activ",
+        "value": 24.0
+    },
+    {
+        "name": "Senzor Aeroport",
+        "lat": 45.7870,
+        "lon": 24.0910,
+        "status": "Inactiv",
+        "value": 0.0     
+    },
+    {
+        "name": "Senzor Shopping City",
+        "lat": 45.7680,
+        "lon": 24.1500,
+        "status": "Alertă",
+        "value": 35.0
+    }
+
+    
+]
+
+metadata_senzori = [
+    {"id": "s1", "name": "Senzor Piața Mare", "lat": 45.7973, "lon": 24.1521},
+    {"id": "s2", "name": "Senzor Zona Ind. Vest", "lat": 45.7950, "lon": 24.1100},
+    {"id": "s3", "name": "Senzor Aeroport", "lat": 45.7870, "lon": 24.0910},
+    {"id": "s4", "name": "Senzor Shopping City", "lat": 45.7680, "lon": 24.1500},
+]
+
+current_state = {s['id']: {"value": 20.0, "status": "Activ"} for s in metadata_senzori}
+
+
+def generate_mock_history():
+    end_date = pd.Timestamp.now().floor('h') 
+    
+    start_date = end_date - pd.Timedelta(days=7)
+
+    time_range = pd.date_range(start=start_date, end=end_date, freq='h') 
+    
+    history_data = []
+
+    print("Generating mock history data...")
+    
+    for t in time_range:
+        for s in metadata_senzori:
+            base_temp = 15 + 10 * np.sin((t.hour - 6) * np.pi / 12) 
+            noise = random.uniform(-2, 2)
+            val = base_temp + noise
+            
+            status = "Activ"
+            if val > 30: status = "Alertă"
+            if random.random() < 0.05: status = "Inactiv"
+            
+            history_data.append({
+                "timestamp": t,
+                "sensor_id": s['id'],
+                "value": val,
+                "status": status
+            })
+            
+    return pd.DataFrame(history_data)
+
+df_history = generate_mock_history()
+
+print("Mock history data generated with", len(df_history), "records.")
 
 def render_dashboard_page():
-    # --- WIDGETS (Inputs) ---
-    # See: https://panel.holoviz.org/reference/index.html#widgets
     pn.extension('vega')
-    admin_btn = pn.widgets.Button(name='Go to Admin', button_type='primary', width=100)
-    admin_btn.js_on_click(code="window.location.href = '/admin'")
-
-    title_input = pn.widgets.TextInput(name='Title', value='My Dashboard')
+    
+    # --- WIDGETS ---
+    mode_switch = pn.widgets.Switch(name='Live Mode', value=True)
+    mode_label = pn.widgets.StaticText(value='<b>Live Mode</b> (Oprește pentru istoric)')
+    
     datetime_picker = pn.widgets.DatetimePicker(
-    name='Datetime Picker', value=dt.datetime(2021, 3, 2, 12, 10)
-)
-
-    m = folium.Map(location=[45.7983, 24.1256], zoom_start=12)
-
-    folium_pane = pn.pane.plot.Folium(m, height=400)
-
-    data = {
-        'An': [2013, 2014, 2015, 2016, 2017, 2018, 
-                 2019, 2020, 2021, 2022, 2023, 2024],
-        'Populatie': [1000, 1200, 1500, 1800, 2200, 2100, 2500, 3000, 3200, 3300, 3350, 3500]
-    }
-    df = pd.DataFrame(data)
-
-    chart = alt.Chart(df).mark_area(
-        line={'color':'darkblue'},
-        color=alt.Gradient(
-            gradient='linear',
-            stops=[alt.GradientStop(color='white', offset=0),
-                   alt.GradientStop(color='darkblue', offset=1)],
-            x1=1, x2=1, y1=1, y2=0
-        )
-    ).encode(
-        x=alt.X('An:O', axis=alt.Axis(title='Anul', labelAngle=0)),
-        y=alt.Y('Populatie', axis=alt.Axis(title='Locuitori')),
-        tooltip=['An', 'Populatie']
-    ).properties(
-        width='container',
-        height=400,
-        title="Evoluția Populației (Anul 2024)"
+        name='Selectează Ora', 
+        value=dt.datetime.now() - dt.timedelta(hours=2),
+        disabled=True
     )
+    
+    counter = pn.widgets.IntInput(value=0, visible=False)
 
-    # --- PANES (Outputs) ---
-    # See: https://panel.holoviz.org/reference/index.html#panes
-    # We bind the output to the widgets so it updates automatically
+    @pn.depends(mode_switch.param.value, watch=True)
+    def update_inputs(is_live):
+        datetime_picker.disabled = is_live
+        if is_live:
+            mode_label.value = '<b>Live Mode</b> (Date în timp real)'
+        else:
+            mode_label.value = '<b>History Mode</b> (Date din arhivă)'
 
-    # --- LAYOUT (Arrangement) ---
-    # See: https://panel.holoviz.org/reference/index.html#layouts
-    # We organize components into Rows and Columns
+    def simulate_live_data():
+        if mode_switch.value:
+            for s_id in current_state:
+            
+                change = random.choice([-0.2, 0, 0.2])
+                current_state[s_id]["value"] += change
+                
+            
+                if current_state[s_id]["value"] > 30:
+                    current_state[s_id]["status"] = "Alertă"
+                else:
+                    current_state[s_id]["status"] = "Activ"
+            
+            counter.value += 1
+
+    pn.state.add_periodic_callback(simulate_live_data, period=1000)
+
+    @pn.depends(counter.param.value, mode_switch.param.value, datetime_picker.param.value)
+    def get_map(tick, is_live, selected_time):
+        
+        m = folium.Map(location=[45.7983, 24.1256], zoom_start=13)
+        
+        for senzor_meta in metadata_senzori:
+            s_id = senzor_meta['id']
+            
+            valoare = 0.0
+            status = "N/A"
+            timestamp_str = "Acum"
+
+            if is_live:
+                data = current_state[s_id]
+                valoare = data['value']
+                status = data['status']
+            
+            else:
+        
+                target_hour = pd.Timestamp(selected_time).floor('h')
+                
+                record = df_history[
+                    (df_history['sensor_id'] == s_id) & 
+                    (df_history['timestamp'] == target_hour)
+                ]
+
+                print(record)
+                
+                if not record.empty:
+                    valoare = record.iloc[0]['value']
+                    status = record.iloc[0]['status']
+                    timestamp_str = target_hour.strftime('%d-%m %H:%M')
+                else:
+                    status = "Fără Date"
+
+            color = 'green'
+            if status == 'Inactiv' or status == 'Fără Date': color = 'gray'
+            elif status == 'Alertă': color = 'red'
+
+            popup_content = f"""
+                <div style='min-width: 140px'>
+                    <b>{senzor_meta['name']}</b><br>
+                    <small>Data: {timestamp_str}</small><hr style="margin:5px 0">
+                    Status: <b>{status}</b><br>
+                    Temp: <b>{valoare:.1f} °C</b>
+                </div>
+            """
+
+            folium.Marker(
+                location=[senzor_meta['lat'], senzor_meta['lon']],
+                popup=popup_content,
+                tooltip=f"{senzor_meta['name']} ({valoare:.1f}°C)",
+                icon=folium.Icon(color=color, icon='info-sign')
+            ).add_to(m)
+
+        return pn.pane.plot.Folium(m, height=400)
+
+   
+    control_row = pn.Row(
+        pn.Column(mode_label, mode_switch),
+        datetime_picker
+    )
+    
     layout = pn.Column(
-        pn.Row(title_input),
-        admin_btn,
-        datetime_picker,
-        folium_pane,
-        pn.layout.Divider(),
-        chart,
+        control_row,
+        counter,
+        get_map,
         pn.layout.Divider(),
     )
 
-    return layout       
+    return layout
 
 def render_admin_page():
     pn.extension('tabulator')
