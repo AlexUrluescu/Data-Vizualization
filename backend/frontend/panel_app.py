@@ -6,48 +6,29 @@ import datetime as dt
 import random
 import threading
 import numpy as np
+import requests
+import os
+from dotenv import load_dotenv
 
-senzori = [
-    {
-        "name": "Senzor Piața Mare",
-        "lat": 45.7973,     
-        "lon": 24.1521,
-        "status": "Activ",
-        "value": 22.0       
-    },
-    {
-        "name": "Senzor Zona Industrială Vest",
-        "lat": 45.7950,
-        "lon": 24.1100,
-        "status": "Activ",
-        "value": 24.0
-    },
-    {
-        "name": "Senzor Aeroport",
-        "lat": 45.7870,
-        "lon": 24.0910,
-        "status": "Inactiv",
-        "value": 0.0     
-    },
-    {
-        "name": "Senzor Shopping City",
-        "lat": 45.7680,
-        "lon": 24.1500,
-        "status": "Alertă",
-        "value": 35.0
-    }
+load_dotenv()
 
-    
-]
+API_URL = os.getenv("API_URL")
+USER_ID = os.getenv("USER_ID")
+USER_HASH = os.getenv("USER_HASH")
 
 metadata_senzori = [
-    {"id": "s1", "name": "Senzor Piața Mare", "lat": 45.7973, "lon": 24.1521},
-    {"id": "s2", "name": "Senzor Zona Ind. Vest", "lat": 45.7950, "lon": 24.1100},
-    {"id": "s3", "name": "Senzor Aeroport", "lat": 45.7870, "lon": 24.0910},
-    {"id": "s4", "name": "Senzor Shopping City", "lat": 45.7680, "lon": 24.1500},
+    {"id": "1600013B", "name": "Sibiu 1", "lat": 45.7982683, "lon": 24.1488102},
+    {"id": "1600019F", "name": "Sibiu 2", "lat": 45.807144, "lon": 24.145801},
+    {"id": "16000284", "name": "Sibiu 3", "lat": 45.786566, "lon": 24.16383},
+    {"id": "16000224", "name": "Sibiu 4", "lat": 45.80865637, "lon": 24.14074895},
+    {"id": "16000341", "name": "Vestem", "lat": 45.7163527, "lon": 24.23857099},
+    {"id": "16000342", "name": "Selimbar", "lat": 45.76698129, "lon": 24.19551811},
+    {"id": "16000343", "name": "Sibiu 5", "lat": 45.810222, "lon": 24.179481},
+    {"id": "16000344", "name": "Mohu", "lat": 45.7429537, "lon": 24.2231919},
+    {"id": "8200029B", "name": "Sibiu 6", "lat": 45.793112, "lon": 24.152697},
 ]
 
-current_state = {s['id']: {"value": 20.0, "status": "Activ"} for s in metadata_senzori}
+current_state = {s['id']: {"value": 0.0, "status": "Activ"} for s in metadata_senzori}
 
 
 def generate_mock_history():
@@ -100,29 +81,51 @@ def render_dashboard_page():
     counter = pn.widgets.IntInput(value=0, visible=False)
 
     @pn.depends(mode_switch.param.value, watch=True)
-    def update_inputs(is_live):
-        datetime_picker.disabled = is_live
-        if is_live:
-            mode_label.value = '<b>Live Mode</b> (Date în timp real)'
-        else:
-            mode_label.value = '<b>History Mode</b> (Date din arhivă)'
 
-    def simulate_live_data():
-        if mode_switch.value:
-            for s_id in current_state:
+    def fetch_data_from_api():
+        if not mode_switch.value:
+            return
+
+        try:
+            api_headers = {
+                "X-User-id": USER_ID,
+                "X-User-hash": USER_HASH               
+            }
             
-                change = random.choice([-0.2, 0, 0.2])
-                current_state[s_id]["value"] += change
+            response = requests.get(API_URL, headers=api_headers, timeout=3)
+            
+            if response.status_code == 200:
+                api_data = response.json() 
                 
-            
-                if current_state[s_id]["value"] > 30:
-                    current_state[s_id]["status"] = "Alertă"
-                else:
-                    current_state[s_id]["status"] = "Activ"
-            
-            counter.value += 1
+                for item in api_data:
+                    api_id = item.get("id")         
+                    temp_value = item.get("last_temperature")
 
-    pn.state.add_periodic_callback(simulate_live_data, period=1000)
+                    if api_id in current_state:
+                        
+                
+                        if temp_value is not None:
+                            current_state[api_id]["value"] = float(temp_value)
+                            
+                            if float(temp_value) == 0:
+                                current_state[api_id]["status"] = "Inactiv"
+                            elif float(temp_value) > 30:
+                                current_state[api_id]["status"] = "Alertă"
+                            else:
+                                current_state[api_id]["status"] = "Activ"
+                
+           
+                counter.value += 1
+                
+            else:
+                print(f"API Error: Status {response.status_code}")
+
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+
+   
+    pn.state.add_periodic_callback(fetch_data_from_api, period=300000)
+    pn.state.onload(fetch_data_from_api)
 
     @pn.depends(counter.param.value, mode_switch.param.value, datetime_picker.param.value)
     def get_map(tick, is_live, selected_time):
