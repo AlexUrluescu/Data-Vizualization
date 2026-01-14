@@ -28,7 +28,7 @@ metadata_senzori = [
     {"id": "8200029B", "name": "Sibiu 6", "lat": 45.793112, "lon": 24.152697},
 ]
 
-current_state = {s['id']: {"value": 0.0, "status": "Activ"} for s in metadata_senzori}
+current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
 
 
 def generate_mock_history():
@@ -120,13 +120,17 @@ def render_dashboard_page():
                 for item in api_data:
                     api_id = item.get("id")         
                     temp_value = item.get("last_temperature")
+                    humidity_value = item.get("last_humidity")
+                    carbon_value = item.get("last_pm25")
 
                     if api_id in current_state:
                         
                 
                         if temp_value is not None:
-                            current_state[api_id]["value"] = float(temp_value)
-                            
+                            current_state[api_id]["temp"] = float(temp_value)
+                            current_state[api_id]["humidity"] = float(humidity_value)
+                            current_state[api_id]["carbon"] = float(carbon_value)
+
                             if float(temp_value) == 0:
                                 current_state[api_id]["status"] = "Inactiv"
                             elif float(temp_value) > 30:
@@ -147,21 +151,41 @@ def render_dashboard_page():
     pn.state.add_periodic_callback(fetch_data_from_api, period=300000)
     pn.state.onload(fetch_data_from_api)
 
-    @pn.depends(counter.param.value, mode_switch.param.value, datetime_picker.param.value)
-    def get_map(tick, is_live, selected_time):
+    def generate_popup_content(all_checked, temp_checked, humidity_checked, carbon_checked, senzor_meta, status, temp, humidity, carbon, timestamp_str):
+        content = f"<div style='min-width: 140px'><b>{senzor_meta['name']}</b><br><small>Data: {timestamp_str}</small><hr style='margin:5px 0'>Status: <b>{status}</b><br>"
+        
+        if all_checked:
+            content += f"Temp: <b>{temp:.1f} °C</b><br>Humidity: <b>{humidity:.1f} %</b><br>Carbon Monoxide: <b>{carbon:.1f} ppm</b><br>"
+        else:
+            if temp_checked:
+                content += f"Temp: <b>{temp:.1f} °C</b><br>"
+            if humidity_checked:
+                content += f"Humidity: <b>{humidity:.1f} %</b><br>"
+            if carbon_checked:
+                content += f"Carbon Monoxide: <b>{carbon:.1f} ppm</b><br>"
+        
+        content += "</div>"
+        return content
+
+    @pn.depends(counter.param.value, mode_switch.param.value, datetime_picker.param.value, checkbox.param.value, checkboxTemperature.param.value, checkboxHumidity.param.value, checkboxCarbon.param.value)
+    def get_map(tick, is_live, selected_time, all_checked, temp_checked, humidity_checked, carbon_checked):
         
         m = folium.Map(location=[45.7983, 24.1256], zoom_start=13)
         
         for senzor_meta in metadata_senzori:
             s_id = senzor_meta['id']
             
-            valoare = 0.0
+            temp = 0.0
+            humidity = 0.0
+            carbon = 0.0
             status = "N/A"
             timestamp_str = "Acum"
 
             if is_live:
                 data = current_state[s_id]
-                valoare = data['value']
+                temp = data['temp']
+                humidity = data['humidity']
+                carbon = data['carbon']
                 status = data['status']
             
             else:
@@ -176,7 +200,9 @@ def render_dashboard_page():
                 print(record)
                 
                 if not record.empty:
-                    valoare = record.iloc[0]['value']
+                    temp = record.iloc[0]['temp']
+                    humidity = record.iloc[0]['humidity']
+                    carbon = record.iloc[0]['carbon']
                     status = record.iloc[0]['status']
                     timestamp_str = target_hour.strftime('%d-%m %H:%M')
                 else:
@@ -186,19 +212,11 @@ def render_dashboard_page():
             if status == 'Inactiv' or status == 'Fără Date': color = 'gray'
             elif status == 'Alertă': color = 'red'
 
-            popup_content = f"""
-                <div style='min-width: 140px'>
-                    <b>{senzor_meta['name']}</b><br>
-                    <small>Data: {timestamp_str}</small><hr style="margin:5px 0">
-                    Status: <b>{status}</b><br>
-                    Temp: <b>{valoare:.1f} °C</b>
-                </div>
-            """
-
+            popup_content = generate_popup_content(all_checked, temp_checked, humidity_checked, carbon_checked, senzor_meta, status, temp, humidity, carbon, timestamp_str)
             folium.Marker(
                 location=[senzor_meta['lat'], senzor_meta['lon']],
                 popup=popup_content,
-                tooltip=f"{senzor_meta['name']} ({valoare:.1f}°C)",
+                tooltip=popup_content,
                 icon=folium.Icon(color=color, icon='info-sign')
             ).add_to(m)
 
