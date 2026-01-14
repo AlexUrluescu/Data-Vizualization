@@ -71,6 +71,11 @@ def render_dashboard_page():
     # --- WIDGETS ---
     mode_switch = pn.widgets.Switch(name='Live Mode', value=True)
     mode_label = pn.widgets.StaticText(value='<b>Live Mode</b> (Oprește pentru istoric)')
+
+    checkbox = pn.widgets.Checkbox(name='All', value=True)
+    checkboxTemperature = pn.widgets.Checkbox(name='Temperature')
+    checkboxHumidity = pn.widgets.Checkbox(name='Humidity')
+    checkboxCarbon = pn.widgets.Checkbox(name='Carbon Monoxide')
     
     datetime_picker = pn.widgets.DatetimePicker(
         name='Selectează Ora', 
@@ -79,6 +84,21 @@ def render_dashboard_page():
     )
     
     counter = pn.widgets.IntInput(value=0, visible=False)
+
+    def toggle_specific_sensors(event):
+        if event.new:
+            checkboxTemperature.value = False
+            checkboxHumidity.value = False
+            checkboxCarbon.value = False
+
+    def toggle_all_checkbox(event):
+        if event.new: 
+            checkbox.value = False
+    checkbox.param.watch(toggle_specific_sensors, 'value')
+    
+    checkboxTemperature.param.watch(toggle_all_checkbox, 'value')
+    checkboxHumidity.param.watch(toggle_all_checkbox, 'value')
+    checkboxCarbon.param.watch(toggle_all_checkbox, 'value')
 
     @pn.depends(mode_switch.param.value, watch=True)
 
@@ -187,7 +207,11 @@ def render_dashboard_page():
    
     control_row = pn.Row(
         pn.Column(mode_label, mode_switch),
-        datetime_picker
+        datetime_picker,
+        checkbox,
+        checkboxTemperature,
+        checkboxHumidity,
+        checkboxCarbon,
     )
     
     layout = pn.Column(
