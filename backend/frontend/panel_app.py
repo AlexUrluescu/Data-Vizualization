@@ -377,10 +377,21 @@ def render_admin_page():
 
 
 def run_panel_server():
+    allowed_origin = os.getenv("RENDER_EXTERNAL_HOSTNAME", "127.0.0.1")
+    
+    origins = [
+        allowed_origin,          
+        "127.0.0.1:5000",       
+        "127.0.0.1:5001",       
+        "localhost:5000",
+        "localhost:5001"
+    ]
+
     pn.serve(
         {'/dashboard': render_dashboard_page, '/admin': render_admin_page}, 
         port=5006, 
-        allow_websocket_origin=["127.0.0.1:5000", "127.0.0.1:5001"], 
+        allow_websocket_origin=origins, 
+        address="0.0.0.0", 
         show=False,
         loop=None
     )
