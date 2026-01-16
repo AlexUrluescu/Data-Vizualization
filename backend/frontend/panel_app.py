@@ -85,22 +85,72 @@ print("Mock history data generated with", len(df_history), "records.")
 
 df_api_data = pd.DataFrame()
 
-def get_temperature_plot():
+def getDeviceIdsFromSelections(location_selector):
+        selected_id = ''
+        if location_selector == 'Terezian':
+            selected_id = "1600019F"
+        if location_selector == 'Tiglari':
+            selected_id = "16000224"
+        if location_selector == 'Centru':
+            selected_id = "1600013B"
+        if location_selector == 'Caposu':
+            selected_id = "16000284"
+        if location_selector == 'Vasile Aron':
+            selected_id = "16000343"
+        if location_selector == 'Gusterita':
+            selected_id = "16000284"
+        if location_selector == 'Selimbar':
+            selected_id = "16000342"
+        return selected_id
+    
+
+def getParameter(parameter_selector):
+        data = {
+            "parameter": "",
+            "title": "",
+            "subtitle": "",
+            "color": ""
+        }
+
+        if parameter_selector == 'Temperature':
+            data["parameter"] = "temperature"
+            data["color"] = "#FF5733"
+            data["title"]="Temperature History"
+            data["subtitle"] = "Temperature (°C)"
+
+        if parameter_selector == 'Humidity':
+            data["parameter"] = "humidity"
+            data["color"] = "#0095F9"
+            data["title"]="Humidity History"
+            data["subtitle"] = "Humidity %"
+
+        if parameter_selector == 'Carbon Monoxide':
+            data["parameter"] = "pm25"
+            data["color"] = "#595959"
+            data["title"]="Monoxid Carbon History"
+            data["subtitle"] = "Monoxid Carbon"
+        
+        return data
+
+def get_temperature_plot(parameter_selector):
     if df_api_data.empty:
         return pn.pane.Markdown("### Waiting for data...")
+    
+    print(f"parameter_selector: {parameter_selector}")
+    parameter_data = getParameter(parameter_selector)
 
     chart = alt.Chart(df_api_data).mark_line(point=True).encode(
         x=alt.X('timestamp:T', title='Time', axis=alt.Axis(format='%H:%M')),
-        y=alt.Y('temperature:Q', title='Temperature (°C)'),
+        y=alt.Y(f'{parameter_data["parameter"]}:Q', title=f'{parameter_data["subtitle"]}'),
         tooltip=[
             alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'), 
             'temperature', 
             'humidity', 
             'pm25'
         ],
-        color=alt.value('#FF5733') 
+        color=alt.value(parameter_data["color"]) 
     ).properties(
-        title="Temperature History",
+        title=parameter_data["title"],
         height=300,
         width='container' 
     ).interactive()
@@ -126,6 +176,13 @@ def render_dashboard_page():
         name='Locations',
         options=['Terezian', 'Tiglari', 'Centru', 'Caposu', 'Vasile Aron', 'Gusterita', 'Selimbar'],
         value='Centru',
+        inline=True     
+    )
+
+    parameter_selector = pn.widgets.RadioBoxGroup(
+        name='Parameters',
+        options=['Temperature', 'Humidity', 'Carbon Monoxide'],
+        value='Temperature',
         inline=True     
     )
 
@@ -158,23 +215,7 @@ def render_dashboard_page():
     checkboxHumidity.param.watch(toggle_all_checkbox, 'value')
     checkboxCarbon.param.watch(toggle_all_checkbox, 'value')
 
-    def getDeviceIdsFromSelections(location_selector):
-        selected_id = ''
-        if location_selector == 'Terezian':
-            selected_id = "1600019F"
-        if location_selector == 'Tiglari':
-            selected_id = "16000224"
-        if location_selector == 'Centru':
-            selected_id = "1600013B"
-        if location_selector == 'Caposu':
-            selected_id = "16000284"
-        if location_selector == 'Vasile Aron':
-            selected_id = "16000343"
-        if location_selector == 'Gusterita':
-            selected_id = "16000284"
-        if location_selector == 'Selimbar':
-            selected_id = "16000342"
-        return selected_id
+
     
 
     @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
@@ -375,9 +416,9 @@ def render_dashboard_page():
 
         return pn.pane.plot.Folium(m, height=400)
 
-    @pn.depends(chart_trigger.param.value, watch=True)
-    def update_chart_view(c):
-        new_content = get_temperature_plot()
+    @pn.depends(chart_trigger.param.value, parameter_selector.param.value,  watch=True)
+    def update_chart_view(c, parameter_selector):
+        new_content = get_temperature_plot(parameter_selector)
         
         chart_container.objects = [new_content]
 
@@ -399,6 +440,7 @@ def render_dashboard_page():
         pn.layout.Divider(),
         pn.pane.Markdown("## Historical Data Analysis"),
         location_selector,
+        parameter_selector,
         chart_container,
         sizing_mode='stretch_width'
     )
