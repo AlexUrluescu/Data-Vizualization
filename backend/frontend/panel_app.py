@@ -10,6 +10,7 @@ import requests
 import os
 from dotenv import load_dotenv
 import json
+from .util_functions import getParameter, get_api_intervals, getDeviceIdsFromSelections, generate_popup_content
 
 load_dotenv()
 
@@ -32,111 +33,13 @@ metadata_senzori = [
 current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
 
 
-def get_api_intervals(date_range_tuple):
-    if not date_range_tuple or len(date_range_tuple) != 2:
-        return None, None
-
-    start_date, end_date = date_range_tuple
-    now = dt.datetime.now()
-
-    if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
-        start_date = dt.datetime.combine(start_date, dt.time.min)
-    if isinstance(end_date, dt.date) and not isinstance(end_date, dt.datetime):
-        end_date = dt.datetime.combine(end_date, dt.time.max)
-
-    start_seconds = int((now - start_date).total_seconds())
-    stop_seconds = int((now - end_date).total_seconds())
-
-    return max(0, start_seconds), max(0, stop_seconds)
-
-def generate_mock_history():
-    end_date = pd.Timestamp.now().floor('h') 
-    
-    start_date = end_date - pd.Timedelta(days=7)
-
-    time_range = pd.date_range(start=start_date, end=end_date, freq='h') 
-    
-    history_data = []
-
-    print("Generating mock history data...")
-    
-    for t in time_range:
-        for s in metadata_senzori:
-            base_temp = 15 + 10 * np.sin((t.hour - 6) * np.pi / 12) 
-            noise = random.uniform(-2, 2)
-            val = base_temp + noise
-            
-            status = "Activ"
-            if val > 30: status = "Alertă"
-            if random.random() < 0.05: status = "Inactiv"
-            
-            history_data.append({
-                "timestamp": t,
-                "sensor_id": s['id'],
-                "value": val,
-                "status": status
-            })
-            
-    return pd.DataFrame(history_data)
-
-df_history = generate_mock_history()
-
-print("Mock history data generated with", len(df_history), "records.")
-
 df_api_data = pd.DataFrame()
 
-def getDeviceIdsFromSelections(location_selector):
-        selected_id = ''
-        if location_selector == 'Terezian':
-            selected_id = "1600019F"
-        if location_selector == 'Tiglari':
-            selected_id = "16000224"
-        if location_selector == 'Centru':
-            selected_id = "1600013B"
-        if location_selector == 'Caposu':
-            selected_id = "16000284"
-        if location_selector == 'Vasile Aron':
-            selected_id = "16000343"
-        if location_selector == 'Gusterita':
-            selected_id = "16000284"
-        if location_selector == 'Selimbar':
-            selected_id = "16000342"
-        return selected_id
-    
-
-def getParameter(parameter_selector):
-        data = {
-            "parameter": "",
-            "title": "",
-            "subtitle": "",
-            "color": ""
-        }
-
-        if parameter_selector == 'Temperature':
-            data["parameter"] = "temperature"
-            data["color"] = "#FF5733"
-            data["title"]="Temperature History"
-            data["subtitle"] = "Temperature (°C)"
-
-        if parameter_selector == 'Humidity':
-            data["parameter"] = "humidity"
-            data["color"] = "#0095F9"
-            data["title"]="Humidity History"
-            data["subtitle"] = "Humidity %"
-
-        if parameter_selector == 'Carbon Monoxide':
-            data["parameter"] = "pm25"
-            data["color"] = "#595959"
-            data["title"]="Monoxid Carbon History"
-            data["subtitle"] = "Monoxid Carbon"
-        
-        return data
 
 def get_temperature_plot(parameter_selector):
     if df_api_data.empty:
         return pn.pane.Markdown("### Waiting for data...")
     
-    print(f"parameter_selector: {parameter_selector}")
     parameter_data = getParameter(parameter_selector)
 
     chart = alt.Chart(df_api_data).mark_line(point=True).encode(
@@ -215,7 +118,6 @@ def render_dashboard_page():
     checkboxHumidity.param.watch(toggle_all_checkbox, 'value')
     checkboxCarbon.param.watch(toggle_all_checkbox, 'value')
 
-
     
 
     @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
@@ -237,7 +139,9 @@ def render_dashboard_page():
         start = 140341
         stop = 53941
 
-        print(f"Fetching historical data from API for range: start={start}, stop={stop}")
+        # print(f"Fetching historical data from API for range: start={start}, stop={stop}")
+        print(f"Fetching historical data from API for range: start2={start_sec}, stop2={stop_sec}")
+
 
         try:
             api_headers = {
@@ -245,7 +149,7 @@ def render_dashboard_page():
                 "X-User-hash": USER_HASH               
             }
 
-            api_url = f"{API_URL}/{deviceId}/all/{start}/{stop}"
+            api_url = f"{API_URL}/{deviceId}/all/{start_sec}/{stop_sec}"
             # https://data.uradmonitor.com/api/v1/devices/1600013B/all/920914/834514
             response = requests.get(api_url, headers=api_headers, timeout=3)
 
@@ -262,14 +166,8 @@ def render_dashboard_page():
                     
                     if isinstance(api_data, list) and len(api_data) > 0:
 
-                        print("--- FIRST API OBJECT ---")
-                    
-                        print(json.dumps(api_data[0], indent=4)) 
-                        print("------------------------")
-                      
                         new_df = pd.DataFrame(api_data)
                         
-                       
                         if 'time' in new_df.columns:
                             new_df['timestamp'] = pd.to_datetime(new_df['time'], unit='s')
                             
@@ -365,21 +263,6 @@ def render_dashboard_page():
     pn.state.onload(fetch_data_for_map)
     pn.state.onload(fetch_data_from_api)
 
-    def generate_popup_content(all_checked, temp_checked, humidity_checked, carbon_checked, senzor_meta, status, temp, humidity, carbon, timestamp_str):
-        content = f"<div style='min-width: 140px'><b>{senzor_meta['name']}</b><br><small>Data: {timestamp_str}</small><hr style='margin:5px 0'>Status: <b>{status}</b><br>"
-        
-        if all_checked:
-            content += f"Temp: <b>{temp:.1f} °C</b><br>Humidity: <b>{humidity:.1f} %</b><br>Carbon Monoxide: <b>{carbon:.1f} ppm</b><br>"
-        else:
-            if temp_checked:
-                content += f"Temp: <b>{temp:.1f} °C</b><br>"
-            if humidity_checked:
-                content += f"Humidity: <b>{humidity:.1f} %</b><br>"
-            if carbon_checked:
-                content += f"Carbon Monoxide: <b>{carbon:.1f} ppm</b><br>"
-        
-        content += "</div>"
-        return content
 
     @pn.depends(counter.param.value, datetime_picker.param.value, checkbox.param.value, checkboxTemperature.param.value, checkboxHumidity.param.value, checkboxCarbon.param.value)
     def get_map(tick, selected_time, all_checked, temp_checked, humidity_checked, carbon_checked):
@@ -428,8 +311,6 @@ def render_dashboard_page():
         checkboxTemperature,
         checkboxHumidity,
         checkboxCarbon,
-        date_range_picker,
-        datetime_picker
     )
     
     layout = pn.Column(
@@ -441,6 +322,8 @@ def render_dashboard_page():
         pn.pane.Markdown("## Historical Data Analysis"),
         location_selector,
         parameter_selector,
+        date_range_picker,
+        # datetime_picker,
         chart_container,
         sizing_mode='stretch_width'
     )

@@ -29,6 +29,7 @@ dependencies = [
     "pymongo==4.10.1",
     "python-dotenv==1.0.0",
     "requests==2.32.5",
+    "schedule>=1.2.2",
     "streamz>=0.6.4",
     "urllib3==2.5.0",
     "werkzeug==3.1.3",
