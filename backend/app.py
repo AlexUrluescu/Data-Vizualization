@@ -84,7 +84,8 @@ def run_server():
         "127.0.0.1", 
         "127.0.0.1:5001",
         "localhost", 
-        "localhost:5001"
+        "localhost:5001",
+        "0.0.0.0:5001"
     ]
 
     print(f"🚀 Starting Server on port {port}...")
@@ -109,8 +110,10 @@ def run_server():
     tornado_app = server._tornado
     wsgi_container = WSGIContainer(flask_app)
     
+    # regex: Match any URL that does NOT start with /dashboard or /admin-panel
+    # This forces Tornado to skip Flask for your dashboard routes
     tornado_app.add_handlers(r".*", [
-        (r".*", FallbackHandler, dict(fallback=wsgi_container))
+        (r"^(?!/dashboard|/admin-panel|/static).*", FallbackHandler, dict(fallback=wsgi_container))
     ])
 
     # 4. Start the Server Loop manually
