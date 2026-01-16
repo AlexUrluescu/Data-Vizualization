@@ -1,14 +1,14 @@
 from flask import Flask
 from flask_cors import CORS
-from app.routes.v1.car_routes import car_routes
-from app.routes.v1.render_home import render_home_page
-from app.routes.v1.render_admin import render_admin_page
-from app.routes.v1.city_routes import city_routes
-from app.routes.v1.population_routes import population_routes
-from app.routes.v1.pollution_routes import pollution_routes
-from app.routes.v1.ai_response import traffic_routes
-from app.routes.v1.parking_spots_routes import parking_spots_routes
-from app.routes.v1.home_ai_response import traffic_routes_home
+from configs.routes.v1.car_routes import car_routes
+from configs.routes.v1.render_home import render_home_page
+from configs.routes.v1.render_admin import render_admin_page
+from configs.routes.v1.city_routes import city_routes
+from configs.routes.v1.population_routes import population_routes
+from configs.routes.v1.pollution_routes import pollution_routes
+from configs.routes.v1.ai_response import traffic_routes
+from configs.routes.v1.parking_spots_routes import parking_spots_routes
+from configs.routes.v1.home_ai_response import traffic_routes_home
 
 def create_app():
   app = Flask(__name__)
