@@ -75,6 +75,7 @@ dependencies = [
     { name = "requests" },
     { name = "schedule" },
     { name = "streamz" },
+    { name = "tornado" },
     { name = "urllib3" },
     { name = "werkzeug" },
 ]
@@ -107,6 +108,7 @@ requires-dist = [
     { name = "requests", specifier = "==2.32.5" },
     { name = "schedule", specifier = ">=1.2.2" },
     { name = "streamz", specifier = ">=0.6.4" },
+    { name = "tornado", specifier = ">=6.5.2" },
     { name = "urllib3", specifier = "==2.5.0" },
     { name = "werkzeug", specifier = "==3.1.3" },
 ]

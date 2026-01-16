@@ -32,12 +32,14 @@
 
 # if __name__ == '__main__':
 #     app.run(port=5001, debug=True, use_reloader=False)
-
-
 import os
 import panel as pn
 from flask import Flask
 from flask_cors import CORS
+
+# Import Tornado helpers (Panel runs on Tornado)
+from tornado.wsgi import WSGIContainer
+from tornado.web import FallbackHandler
 
 # Import your routes
 from configs.routes.v1.car_routes import car_routes
@@ -53,10 +55,9 @@ from configs.routes.v1.home_ai_response import traffic_routes_home
 # Import your Panel pages
 from frontend.panel_app import render_dashboard_page, render_admin_page as panel_admin_page
 
+# 1. Create Flask App
 def create_flask_app():
     app = Flask(__name__)
-    
-    # Update CORS to allow the Render domain if needed, or keep as is
     CORS(app, resources={r"/api/*": {"origins": "*"}}) 
 
     app.register_blueprint(car_routes, url_prefix='/api/v1/cars')
@@ -71,18 +72,12 @@ def create_flask_app():
 
     return app
 
-# Initialize Flask
 flask_app = create_flask_app()
 
 def run_server():
-    # 1. Get the PORT from Render (defaults to 5001 locally)
     port = int(os.environ.get("PORT", 5001))
-    
-    # 2. Get the public URL to allow WebSocket connections
-    # On Render, this is set automatically. Locally, we default to localhost.
     public_url = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
     
-    # 3. Define allowed origins
     allow_origins = [
         public_url, 
         f"{public_url}:{port}", 
@@ -93,21 +88,34 @@ def run_server():
     ]
 
     print(f"🚀 Starting Server on port {port}...")
-    print(f"🌍 Allowed WebSocket Origins: {allow_origins}")
 
-    # 4. Serve BOTH Flask and Panel on the same port
-    pn.serve(
+    # 2. Setup Panel Server (BUT DO NOT START IT YET)
+    # We only pass the Panel apps here. We do NOT pass Flask here.
+    server = pn.serve(
         {
-            '/': flask_app,                # Flask handles the root
-            '/dashboard': render_dashboard_page, # Panel handles /dashboard
-            '/admin-panel': panel_admin_page     # Panel handles /admin-panel
+            '/dashboard': render_dashboard_page, 
+            '/admin-panel': panel_admin_page    
         },
         port=port,
         address="0.0.0.0",
         allow_websocket_origin=allow_origins,
         show=False,
-        threaded=True # Use threading to handle requests efficiently
+        start=False  # <--- Important: We pause execution here to inject Flask
     )
+
+    # 3. Inject Flask as a Fallback
+    # This logic says: "If the URL matches /dashboard, Panel handles it."
+    # "If it matches ANYTHING else (.*), give it to Flask."
+    tornado_app = server._tornado
+    wsgi_container = WSGIContainer(flask_app)
+    
+    tornado_app.add_handlers(r".*", [
+        (r".*", FallbackHandler, dict(fallback=wsgi_container))
+    ])
+
+    # 4. Start the Server Loop manually
+    server.start()
+    server.io_loop.start()
 
 if __name__ == '__main__':
     run_server()
