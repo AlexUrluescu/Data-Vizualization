@@ -265,7 +265,7 @@
 
 
 # app/routes/traffic_routes.py
-from app.config import Config
+from configs.config import Config
 from flask import Blueprint, request, jsonify
 import os
 import json

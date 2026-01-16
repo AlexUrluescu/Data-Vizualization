@@ -1,16 +1,16 @@
 from pyexpat import errors
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
-from app.config import Config
-from app.models.helpers import convert_objectid
+from configs.config import Config
+from configs.models.helpers import convert_objectid
 
-parking_spots_routes = Blueprint("parking_spots_routes", __name__)
+population_routes = Blueprint("population_routes", __name__)
 db = Config.get_db()
-parking_spots_collection = db["parking_spots"]
+population_collection = db["population"]
 cities_collection = db["cities"]
 
-@parking_spots_routes.route("/", methods=["GET"])
-def get_parking_spots():
+@population_routes.route("/", methods=["GET"])
+def get_population():
     try:
         # Collect optional query params
         city_id = request.args.get("cityId")
@@ -30,9 +30,9 @@ def get_parking_spots():
             except ValueError:
                 return jsonify({"error": "Year must be an integer"}), 400
 
-        # Fetch cars
-        parking_spots_cursor = parking_spots_collection.find(query)
-        parking_spots = [convert_objectid(doc) for doc in parking_spots_cursor]
+        # Fetch population data
+        population_cursor = population_collection.find(query)
+        population = [convert_objectid(doc) for doc in population_cursor]
 
         # If requested, include city info
         if include_city and city_id:
@@ -40,12 +40,12 @@ def get_parking_spots():
             if not city:
                 return jsonify({"error": "City not found"}), 404
             response = {
-                "city": convert_objectid(city),
-                "parking_spots": parking_spots
+                "cars": population,
+                "city": convert_objectid(city)
             }
             return jsonify(response), 200
 
-        return jsonify(parking_spots), 200
+        return jsonify(population), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

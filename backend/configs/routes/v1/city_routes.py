@@ -1,8 +1,8 @@
 from pyexpat import errors
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
-from app.config import Config
-from app.models.helpers import convert_objectid
+from configs.config import Config
+from configs.models.helpers import convert_objectid
 
 city_routes = Blueprint("city_routes", __name__)
 db = Config.get_db()

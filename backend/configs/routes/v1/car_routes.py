@@ -1,16 +1,16 @@
 from pyexpat import errors
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
-from app.config import Config
-from app.models.helpers import convert_objectid
+from configs.config import Config
+from configs.models.helpers import convert_objectid
 
-population_routes = Blueprint("population_routes", __name__)
+car_routes = Blueprint("car_routes", __name__)
 db = Config.get_db()
-population_collection = db["population"]
+cars_collection = db["cars"]
 cities_collection = db["cities"]
 
-@population_routes.route("/", methods=["GET"])
-def get_population():
+@car_routes.route("/", methods=["GET"])
+def get_cars():
     try:
         # Collect optional query params
         city_id = request.args.get("cityId")
@@ -30,9 +30,9 @@ def get_population():
             except ValueError:
                 return jsonify({"error": "Year must be an integer"}), 400
 
-        # Fetch population data
-        population_cursor = population_collection.find(query)
-        population = [convert_objectid(doc) for doc in population_cursor]
+        # Fetch cars
+        cars_cursor = cars_collection.find(query)
+        cars = [convert_objectid(doc) for doc in cars_cursor]
 
         # If requested, include city info
         if include_city and city_id:
@@ -40,12 +40,12 @@ def get_population():
             if not city:
                 return jsonify({"error": "City not found"}), 404
             response = {
-                "cars": population,
+                "cars": cars,
                 "city": convert_objectid(city)
             }
             return jsonify(response), 200
 
-        return jsonify(population), 200
+        return jsonify(cars), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

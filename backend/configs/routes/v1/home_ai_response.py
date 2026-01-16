@@ -1427,7 +1427,7 @@
 #             "details": str(e)
 #         }), 500
 
-from app.config import Config
+from configs.config import Config
 from flask import Blueprint, request, jsonify
 import os
 import json

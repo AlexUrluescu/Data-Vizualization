@@ -1,16 +1,16 @@
 from pyexpat import errors
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
-from app.config import Config
-from app.models.helpers import convert_objectid
+from configs.config import Config
+from configs.models.helpers import convert_objectid
 
-car_routes = Blueprint("car_routes", __name__)
+parking_spots_routes = Blueprint("parking_spots_routes", __name__)
 db = Config.get_db()
-cars_collection = db["cars"]
+parking_spots_collection = db["parking_spots"]
 cities_collection = db["cities"]
 
-@car_routes.route("/", methods=["GET"])
-def get_cars():
+@parking_spots_routes.route("/", methods=["GET"])
+def get_parking_spots():
     try:
         # Collect optional query params
         city_id = request.args.get("cityId")
@@ -31,8 +31,8 @@ def get_cars():
                 return jsonify({"error": "Year must be an integer"}), 400
 
         # Fetch cars
-        cars_cursor = cars_collection.find(query)
-        cars = [convert_objectid(doc) for doc in cars_cursor]
+        parking_spots_cursor = parking_spots_collection.find(query)
+        parking_spots = [convert_objectid(doc) for doc in parking_spots_cursor]
 
         # If requested, include city info
         if include_city and city_id:
@@ -40,12 +40,12 @@ def get_cars():
             if not city:
                 return jsonify({"error": "City not found"}), 404
             response = {
-                "cars": cars,
-                "city": convert_objectid(city)
+                "city": convert_objectid(city),
+                "parking_spots": parking_spots
             }
             return jsonify(response), 200
 
-        return jsonify(cars), 200
+        return jsonify(parking_spots), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -1,5 +1,5 @@
 from flask import Blueprint
-from app.config import Config
+from configs.config import Config
 from bokeh.embed import server_document
 import frontend.panel_app as panel_app
 from flask import render_template
