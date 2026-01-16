@@ -11,6 +11,7 @@ import os
 from dotenv import load_dotenv
 import json
 from .util_functions import getParameter, get_api_intervals, getDeviceIdsFromSelections, generate_popup_content
+from .css import date_picker_style, my_custom_style, checkbox_style_square
 
 load_dotenv()
 
@@ -60,14 +61,46 @@ def get_temperature_plot(parameter_selector):
 
     return pn.pane.Vega(chart, sizing_mode='stretch_width')
 
+
 def render_dashboard_page():
     pn.extension('vega')
     
     # --- WIDGETS ---
-    checkbox = pn.widgets.Checkbox(name='All', value=True)
-    checkboxTemperature = pn.widgets.Checkbox(name='Temperature')
-    checkboxHumidity = pn.widgets.Checkbox(name='Humidity')
-    checkboxCarbon = pn.widgets.Checkbox(name='Carbon Monoxide')
+    
+    checkbox = pn.widgets.Checkbox(
+        name='All', 
+        value=True, 
+        css_classes=['styled-checkbox'], 
+        stylesheets=[checkbox_style_square]
+    )
+    
+    checkboxTemperature = pn.widgets.Checkbox(
+        name='Temperature', 
+        css_classes=['styled-checkbox'], 
+        stylesheets=[checkbox_style_square]
+    )
+    
+    checkboxHumidity = pn.widgets.Checkbox(
+        name='Humidity', 
+        css_classes=['styled-checkbox'], 
+        stylesheets=[checkbox_style_square]
+    )
+    
+    checkboxCarbon = pn.widgets.Checkbox(
+        name='Carbon Monoxide', 
+        css_classes=['styled-checkbox'], 
+        stylesheets=[checkbox_style_square]
+    )
+
+    # Le punem într-un rând cu spațiere (gap) ca să respire designul
+    control_row = pn.Row(
+        checkbox,
+        checkboxTemperature,
+        checkboxHumidity,
+        checkboxCarbon,
+        sizing_mode='stretch_width',
+        styles={'gap': '20px', 'align-items': 'center'} # Spațiu între ele
+    )
 
     chart_container = pn.Column(
         pn.pane.Markdown("### Waiting for data...", height=300), 
@@ -79,19 +112,28 @@ def render_dashboard_page():
         name='Locations',
         options=['Terezian', 'Tiglari', 'Centru', 'Caposu', 'Vasile Aron', 'Gusterita', 'Selimbar'],
         value='Centru',
-        inline=True     
+        inline=True,
+       css_classes=['location-selector'],
+        # AICI ESTE SECRETUL PENTRU PANEL 1.0+:
+        stylesheets=[my_custom_style]  
     )
 
     parameter_selector = pn.widgets.RadioBoxGroup(
         name='Parameters',
         options=['Temperature', 'Humidity', 'Carbon Monoxide'],
         value='Temperature',
-        inline=True     
+        inline=True,
+        css_classes=['location-selector'],
+        # AICI ESTE SECRETUL PENTRU PANEL 1.0+:
+        stylesheets=[my_custom_style]       
     )
 
     today = dt.date.today()
     date_range_picker = pn.widgets.DateRangePicker(
-        name='Date Range Picker', value=(today, today)
+        name='Date Range Picker', value=(today, today),
+        css_classes=['my-date-picker'], # Clasa de identificare
+        stylesheets=[date_picker_style], # Injectăm CSS-ul direct
+        sizing_mode='stretch_width'
     )
     
     datetime_picker = pn.widgets.DatetimePicker(
@@ -268,6 +310,18 @@ def render_dashboard_page():
     def get_map(tick, selected_time, all_checked, temp_checked, humidity_checked, carbon_checked):
         
         m = folium.Map(location=[45.7983, 24.1256], zoom_start=13)
+
+        css_fix = """
+        <style>
+            @media (hover: none), (max-width: 768px) {
+                .leaflet-tooltip {
+                    display: none !important;
+                }
+            }
+        </style>
+        """
+
+        m.get_root().header.add_child(folium.Element(css_fix))
         
         for senzor_meta in metadata_senzori:
             s_id = senzor_meta['id']
@@ -305,13 +359,6 @@ def render_dashboard_page():
         
         chart_container.objects = [new_content]
 
-
-    control_row = pn.Row(
-        checkbox,
-        checkboxTemperature,
-        checkboxHumidity,
-        checkboxCarbon,
-    )
     
     layout = pn.Column(
         control_row,
