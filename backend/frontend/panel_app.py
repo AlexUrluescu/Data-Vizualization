@@ -9,6 +9,7 @@ import numpy as np
 import requests
 import os
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
@@ -30,6 +31,23 @@ metadata_senzori = [
 
 current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
 
+
+def get_api_intervals(date_range_tuple):
+    if not date_range_tuple or len(date_range_tuple) != 2:
+        return None, None
+
+    start_date, end_date = date_range_tuple
+    now = dt.datetime.now()
+
+    if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
+        start_date = dt.datetime.combine(start_date, dt.time.min)
+    if isinstance(end_date, dt.date) and not isinstance(end_date, dt.datetime):
+        end_date = dt.datetime.combine(end_date, dt.time.max)
+
+    start_seconds = int((now - start_date).total_seconds())
+    stop_seconds = int((now - end_date).total_seconds())
+
+    return max(0, start_seconds), max(0, stop_seconds)
 
 def generate_mock_history():
     end_date = pd.Timestamp.now().floor('h') 
@@ -65,25 +83,64 @@ df_history = generate_mock_history()
 
 print("Mock history data generated with", len(df_history), "records.")
 
+df_api_data = pd.DataFrame()
+
+def get_temperature_plot():
+    if df_api_data.empty:
+        return pn.pane.Markdown("### Waiting for data...")
+
+    chart = alt.Chart(df_api_data).mark_line(point=True).encode(
+        x=alt.X('timestamp:T', title='Time', axis=alt.Axis(format='%H:%M')),
+        y=alt.Y('temperature:Q', title='Temperature (°C)'),
+        tooltip=[
+            alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'), 
+            'temperature', 
+            'humidity', 
+            'pm25'
+        ],
+        color=alt.value('#FF5733') 
+    ).properties(
+        title="Temperature History",
+        height=300,
+        width='container' 
+    ).interactive()
+
+    return pn.pane.Vega(chart, sizing_mode='stretch_width')
+
 def render_dashboard_page():
     pn.extension('vega')
     
     # --- WIDGETS ---
-    mode_switch = pn.widgets.Switch(name='Live Mode', value=True)
-    mode_label = pn.widgets.StaticText(value='<b>Live Mode</b> (Oprește pentru istoric)')
-
     checkbox = pn.widgets.Checkbox(name='All', value=True)
     checkboxTemperature = pn.widgets.Checkbox(name='Temperature')
     checkboxHumidity = pn.widgets.Checkbox(name='Humidity')
     checkboxCarbon = pn.widgets.Checkbox(name='Carbon Monoxide')
+
+    chart_container = pn.Column(
+        pn.pane.Markdown("### Waiting for data...", height=300), 
+        sizing_mode='stretch_width',
+        min_height=300 
+    )
+
+    location_selector = pn.widgets.RadioBoxGroup(
+        name='Locations',
+        options=['Terezian', 'Tiglari', 'Centru', 'Caposu', 'Vasile Aron', 'Gusterita', 'Selimbar'],
+        value='Centru',
+        inline=True     
+    )
+
+    today = dt.date.today()
+    date_range_picker = pn.widgets.DateRangePicker(
+        name='Date Range Picker', value=(today, today)
+    )
     
     datetime_picker = pn.widgets.DatetimePicker(
-        name='Selectează Ora', 
-        value=dt.datetime.now() - dt.timedelta(hours=2),
-        disabled=True
+        name='Selectează Ora din Istoric', 
+        value=dt.datetime.now(),
     )
     
     counter = pn.widgets.IntInput(value=0, visible=False)
+    chart_trigger = pn.widgets.IntInput(value=0, visible=False)
 
     def toggle_specific_sensors(event):
         if event.new:
@@ -94,61 +151,177 @@ def render_dashboard_page():
     def toggle_all_checkbox(event):
         if event.new: 
             checkbox.value = False
+
     checkbox.param.watch(toggle_specific_sensors, 'value')
     
     checkboxTemperature.param.watch(toggle_all_checkbox, 'value')
     checkboxHumidity.param.watch(toggle_all_checkbox, 'value')
     checkboxCarbon.param.watch(toggle_all_checkbox, 'value')
 
-    @pn.depends(mode_switch.param.value, watch=True)
+    def getDeviceIdsFromSelections(location_selector):
+        selected_id = ''
+        if location_selector == 'Terezian':
+            selected_id = "1600019F"
+        if location_selector == 'Tiglari':
+            selected_id = "16000224"
+        if location_selector == 'Centru':
+            selected_id = "1600013B"
+        if location_selector == 'Caposu':
+            selected_id = "16000284"
+        if location_selector == 'Vasile Aron':
+            selected_id = "16000343"
+        if location_selector == 'Gusterita':
+            selected_id = "16000284"
+        if location_selector == 'Selimbar':
+            selected_id = "16000342"
+        return selected_id
+    
 
-    def fetch_data_from_api():
-        if not mode_switch.value:
-            return
+    @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
+    def fetch_data_from_api(date_range=None, datetime_value=None, location_selector_value="Centru"):
+        global df_api_data
+
+        if datetime_picker.disabled:
+            datetime_picker.disabled = False
+
+        print(f"location_selector_value: {location_selector_value}")
+
+        deviceId = getDeviceIdsFromSelections(location_selector_value)
+
+        print(f"datetime_value selected: {datetime_value}")
+        print(f"date_range selected: {date_range}")
+            
+        start_sec, stop_sec = get_api_intervals(date_range)
+
+        start = 140341
+        stop = 53941
+
+        print(f"Fetching historical data from API for range: start={start}, stop={stop}")
 
         try:
             api_headers = {
                 "X-User-id": USER_ID,
                 "X-User-hash": USER_HASH               
             }
-            
-            response = requests.get(API_URL, headers=api_headers, timeout=3)
-            
-            if response.status_code == 200:
-                api_data = response.json() 
-                
-                for item in api_data:
-                    api_id = item.get("id")         
-                    temp_value = item.get("last_temperature")
-                    humidity_value = item.get("last_humidity")
-                    carbon_value = item.get("last_pm25")
 
-                    if api_id in current_state:
+            api_url = f"{API_URL}/{deviceId}/all/{start}/{stop}"
+            # https://data.uradmonitor.com/api/v1/devices/1600013B/all/920914/834514
+            response = requests.get(api_url, headers=api_headers, timeout=3)
+
+            print("API Request URL:", api_url)
+            print(f"API Response Status: {response.status_code}")
+
+            try:
+
+                api_headers = {"X-User-id": USER_ID, "X-User-hash": USER_HASH}
+                response = requests.get(api_url, headers=api_headers, timeout=5)
+
+                if response.status_code == 200:
+                    api_data = response.json()
+                    
+                    if isinstance(api_data, list) and len(api_data) > 0:
+
+                        print("--- FIRST API OBJECT ---")
+                    
+                        print(json.dumps(api_data[0], indent=4)) 
+                        print("------------------------")
+                      
+                        new_df = pd.DataFrame(api_data)
+                        
+                       
+                        if 'time' in new_df.columns:
+                            new_df['timestamp'] = pd.to_datetime(new_df['time'], unit='s')
+                            
+                        new_df = new_df.sort_values('timestamp')
+                        
+                        df_api_data = new_df
                         
                 
-                        if temp_value is not None:
-                            current_state[api_id]["temp"] = float(temp_value)
-                            current_state[api_id]["humidity"] = float(humidity_value)
-                            current_state[api_id]["carbon"] = float(carbon_value)
+                        chart_trigger.value += 1
+               
 
-                            if float(temp_value) == 0:
-                                current_state[api_id]["status"] = "Inactiv"
-                            elif float(temp_value) > 30:
-                                current_state[api_id]["status"] = "Alertă"
-                            else:
-                                current_state[api_id]["status"] = "Activ"
-                
-           
-                counter.value += 1
-                
-            else:
-                print(f"API Error: Status {response.status_code}")
+                    if len(api_data) > 0:
+                        last_item = api_data[-1]
+                        
+                        s_id = "1600013B" 
+                        if s_id in current_state:
+                            current_state[s_id]["temp"] = float(last_item.get("temperature", 0))
+                            current_state[s_id]["humidity"] = float(last_item.get("humidity", 0))
+                            current_state[s_id]["carbon"] = float(last_item.get("pm25", 0)) 
+
+                else:
+                    print(f"API Error: {response.status_code}")
+
+            except Exception as e:
+                print(f"Error fetching data: {e}")
 
         except Exception as e:
             print(f"Error fetching data: {e}")
 
-   
-    pn.state.add_periodic_callback(fetch_data_from_api, period=300000)
+    @pn.depends(checkbox.param.value, checkboxTemperature.param.value, checkboxHumidity.param.value, checkboxCarbon.param.value, watch=True)
+    def fetch_data_for_map(all=None, temperature=None, humidity=None, carbon=None):
+        global df_api_data
+
+        try:
+            api_headers = {
+                "X-User-id": USER_ID,
+                "X-User-hash": USER_HASH               
+            }
+
+            
+            # https://data.uradmonitor.com/api/v1/devices/1600013B/all/920914/834514
+            response = requests.get(API_URL, headers=api_headers, timeout=3)
+
+            print("API Request URL:", API_URL)
+            print(f"API Response Status: {response.status_code}")
+
+            try:
+                if response.status_code == 200:
+                    api_data = response.json() 
+                    
+                    for item in api_data:
+                        api_id = item.get("id")         
+                        temp_value = item.get("last_temperature")
+                        humidity_value = item.get("last_humidity")
+                        carbon_value = item.get("last_pm25")
+                        # api_id = item.get("1600013B")
+                        # temp_value = item.get("temperature")
+                        # humidity_value = item.get("humidity")
+                        # carbon_value = item.get("pm25")
+
+                        # print(f"Processing data for sensor {api_id}: Temp={temp_value}, Humidity={humidity_value}, Carbon={carbon_value}")
+
+                        if api_id in current_state:
+                            
+                    
+                            if temp_value is not None:
+                                current_state[api_id]["temp"] = float(temp_value)
+                                current_state[api_id]["humidity"] = float(humidity_value)
+                                current_state[api_id]["carbon"] = float(carbon_value)
+
+                                if float(temp_value) == 0:
+                                    current_state[api_id]["status"] = "Inactiv"
+                                elif float(temp_value) > 30:
+                                    current_state[api_id]["status"] = "Alertă"
+                                else:
+                                    current_state[api_id]["status"] = "Activ"
+                    
+            
+                    counter.value += 1
+                    
+                else:
+                    print(f"API Error: Status {response.status_code}")
+
+
+            except Exception as e:
+                print(f"Error fetching data: {e}")
+            
+
+
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+    pn.state.add_periodic_callback(fetch_data_for_map, period=300000)
+    pn.state.onload(fetch_data_for_map)
     pn.state.onload(fetch_data_from_api)
 
     def generate_popup_content(all_checked, temp_checked, humidity_checked, carbon_checked, senzor_meta, status, temp, humidity, carbon, timestamp_str):
@@ -167,8 +340,8 @@ def render_dashboard_page():
         content += "</div>"
         return content
 
-    @pn.depends(counter.param.value, mode_switch.param.value, datetime_picker.param.value, checkbox.param.value, checkboxTemperature.param.value, checkboxHumidity.param.value, checkboxCarbon.param.value)
-    def get_map(tick, is_live, selected_time, all_checked, temp_checked, humidity_checked, carbon_checked):
+    @pn.depends(counter.param.value, datetime_picker.param.value, checkbox.param.value, checkboxTemperature.param.value, checkboxHumidity.param.value, checkboxCarbon.param.value)
+    def get_map(tick, selected_time, all_checked, temp_checked, humidity_checked, carbon_checked):
         
         m = folium.Map(location=[45.7983, 24.1256], zoom_start=13)
         
@@ -181,33 +354,13 @@ def render_dashboard_page():
             status = "N/A"
             timestamp_str = "Acum"
 
-            if is_live:
-                data = current_state[s_id]
-                temp = data['temp']
-                humidity = data['humidity']
-                carbon = data['carbon']
-                status = data['status']
-            
-            else:
         
-                target_hour = pd.Timestamp(selected_time).floor('h')
-                
-                record = df_history[
-                    (df_history['sensor_id'] == s_id) & 
-                    (df_history['timestamp'] == target_hour)
-                ]
-
-                print(record)
-                
-                if not record.empty:
-                    temp = record.iloc[0]['temp']
-                    humidity = record.iloc[0]['humidity']
-                    carbon = record.iloc[0]['carbon']
-                    status = record.iloc[0]['status']
-                    timestamp_str = target_hour.strftime('%d-%m %H:%M')
-                else:
-                    status = "Fără Date"
-
+            data = current_state[s_id]
+            temp = data['temp']
+            humidity = data['humidity']
+            carbon = data['carbon']
+            status = data['status']
+        
             color = 'green'
             if status == 'Inactiv' or status == 'Fără Date': color = 'gray'
             elif status == 'Alertă': color = 'red'
@@ -222,21 +375,32 @@ def render_dashboard_page():
 
         return pn.pane.plot.Folium(m, height=400)
 
-   
+    @pn.depends(chart_trigger.param.value, watch=True)
+    def update_chart_view(c):
+        new_content = get_temperature_plot()
+        
+        chart_container.objects = [new_content]
+
+
     control_row = pn.Row(
-        pn.Column(mode_label, mode_switch),
-        datetime_picker,
         checkbox,
         checkboxTemperature,
         checkboxHumidity,
         checkboxCarbon,
+        date_range_picker,
+        datetime_picker
     )
     
     layout = pn.Column(
         control_row,
         counter,
+        chart_trigger,
         get_map,
         pn.layout.Divider(),
+        pn.pane.Markdown("## Historical Data Analysis"),
+        location_selector,
+        chart_container,
+        sizing_mode='stretch_width'
     )
 
     return layout
