@@ -36,30 +36,91 @@ current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "car
 
 df_api_data = pd.DataFrame()
 
-
 def get_temperature_plot(parameter_selector):
     if df_api_data.empty:
         return pn.pane.Markdown("### Waiting for data...")
     
     parameter_data = getParameter(parameter_selector)
+    param_name = parameter_data["parameter"]
+    
+    data_min = df_api_data[param_name].min()
+    data_max = df_api_data[param_name].max()
+    
+    padding = (data_max - data_min) * 0.1 if data_max != data_min else 1.0
+    
+    if pd.isna(data_min): data_min = 0
+    if pd.isna(data_max): data_max = 10
 
-    chart = alt.Chart(df_api_data).mark_line(point=True).encode(
+    domain_start = data_min - padding
+    domain_end = data_max + padding
+
+    background_zones = []
+
+    if 'temperature' in param_name.lower():
+        background_zones = [
+            {'y_start': -0, 'y_end': -30, 'color': "#3D92AF", 'label': 'Cold (<10°C)'},    
+            {'y_start': -0, 'y_end': 10, 'color': '#ADD8E6', 'label': 'Cold (<10°C)'},    
+            {'y_start': 10, 'y_end': 20, 'color': "#8BF89A", 'label': 'Comfortable'},   
+            {'y_start': 20, 'y_end': 30, 'color': '#FFCCCC', 'label': 'Warm'},     
+            {'y_start': 30, 'y_end': 60, 'color': "#F87070", 'label': 'Hot (>30°C)'}     
+        ]
+
+    elif 'humidity' in param_name.lower():
+        background_zones = [
+          
+            {'y_start': 0, 'y_end': 30, 'color': '#FFFACD', 'label': 'Dry (<30%)'},       
+         
+            {'y_start': 30, 'y_end': 70, 'color': '#D0F0C0', 'label': 'Comfortable'},      
+            
+            {'y_start': 70, 'y_end': 100, 'color': '#E0FFFF', 'label': 'Humid (>70%)'}    
+        ]
+
+    elif 'pm25' in param_name.lower() or 'carbon' in param_name.lower():
+        background_zones = [
+          
+            {'y_start': 0, 'y_end': 50, 'color': '#D0F0C0', 'label': 'Good'},             
+            
+            {'y_start': 51, 'y_end': 100, 'color': '#FFFACD', 'label': 'Moderate'},        
+            
+            {'y_start': 101, 'y_end': 150, 'color': '#FFCC99', 'label': 'Unhealthy'},       
+            
+            {'y_start': 151, 'y_end': 200, 'color': '#FFCCCC', 'label': 'Very Unhealthy'}       
+        ]
+
+    df_bg = pd.DataFrame(background_zones)
+
+    bg_chart = alt.Chart(df_bg).mark_rect(opacity=0.4).encode(
+        y='y_start:Q',
+        y2='y_end:Q',
+        color=alt.Color('color:N', scale=None),
+        tooltip='label'
+    )
+
+    line_chart = alt.Chart(df_api_data).mark_line(point=True).encode(
         x=alt.X('timestamp:T', title='Time', axis=alt.Axis(format='%H:%M')),
-        y=alt.Y(f'{parameter_data["parameter"]}:Q', title=f'{parameter_data["subtitle"]}'),
+        y=alt.Y(
+            f'{param_name}:Q', 
+            title=f'{parameter_data["subtitle"]}',
+            scale=alt.Scale(domain=[domain_start, domain_end]) 
+        ),
+        color=alt.Color('Location:N', legend=alt.Legend(title="Locations")), 
         tooltip=[
             alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'), 
+            'Location',
             'temperature', 
             'humidity', 
             'pm25'
-        ],
-        color=alt.value(parameter_data["color"]) 
-    ).properties(
+        ]
+    )
+
+    # --- 5. LAYER AND COMBINE ---
+    final_chart = alt.layer(bg_chart, line_chart).properties(
         title=parameter_data["title"],
-        height=300,
-        width='container' 
+        height=500,
+        width='container'
     ).interactive()
 
-    return pn.pane.Vega(chart, sizing_mode='stretch_width')
+    return pn.pane.Vega(final_chart, sizing_mode='stretch_width')
 
 
 def render_dashboard_page():
@@ -108,13 +169,22 @@ def render_dashboard_page():
         min_height=300 
     )
 
-    location_selector = pn.widgets.RadioBoxGroup(
+    # location_selector = pn.widgets.RadioBoxGroup(
+    #     name='Locations',
+    #     options=['Terezian', 'Tiglari', 'Centru', 'Caposu', 'Vasile Aron', 'Gusterita', 'Selimbar'],
+    #     value='Centru',
+    #     inline=True,
+    #    css_classes=['location-selector'],
+    #     # AICI ESTE SECRETUL PENTRU PANEL 1.0+:
+    #     stylesheets=[my_custom_style]  
+    # )
+    # Change from RadioBoxGroup to CheckBoxGroup to allow multiple selections
+    location_selector = pn.widgets.CheckBoxGroup(
         name='Locations',
         options=['Terezian', 'Tiglari', 'Centru', 'Caposu', 'Vasile Aron', 'Gusterita', 'Selimbar'],
-        value='Centru',
+        value=['Centru'], # Default is now a list
         inline=True,
-       css_classes=['location-selector'],
-        # AICI ESTE SECRETUL PENTRU PANEL 1.0+:
+        css_classes=['location-selector'],
         stylesheets=[my_custom_style]  
     )
 
@@ -162,82 +232,164 @@ def render_dashboard_page():
 
     
 
+    # @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
+    # def fetch_data_from_api(date_range=None, datetime_value=None, location_selector_value="Centru"):
+    #     global df_api_data
+
+    #     if datetime_picker.disabled:
+    #         datetime_picker.disabled = False
+
+    #     print(f"location_selector_value: {location_selector_value}")
+
+    #     deviceId = getDeviceIdsFromSelections(location_selector_value)
+
+    #     print(f"datetime_value selected: {datetime_value}")
+    #     print(f"date_range selected: {date_range}")
+            
+    #     start_sec, stop_sec = get_api_intervals(date_range)
+
+    #     start = 140341
+    #     stop = 53941
+
+    #     # print(f"Fetching historical data from API for range: start={start}, stop={stop}")
+    #     print(f"Fetching historical data from API for range: start2={start_sec}, stop2={stop_sec}")
+
+
+    #     try:
+    #         api_headers = {
+    #             "X-User-id": USER_ID,
+    #             "X-User-hash": USER_HASH               
+    #         }
+
+    #         api_url = f"{API_URL}/{deviceId}/all/{start_sec}/{stop_sec}"
+    #         # https://data.uradmonitor.com/api/v1/devices/1600013B/all/920914/834514
+    #         response = requests.get(api_url, headers=api_headers, timeout=3)
+
+    #         print("API Request URL:", api_url)
+    #         print(f"API Response Status: {response.status_code}")
+
+    #         try:
+
+    #             api_headers = {"X-User-id": USER_ID, "X-User-hash": USER_HASH}
+    #             response = requests.get(api_url, headers=api_headers, timeout=5)
+
+    #             if response.status_code == 200:
+    #                 api_data = response.json()
+                    
+    #                 if isinstance(api_data, list) and len(api_data) > 0:
+
+    #                     new_df = pd.DataFrame(api_data)
+                        
+    #                     if 'time' in new_df.columns:
+    #                         new_df['timestamp'] = pd.to_datetime(new_df['time'], unit='s')
+                            
+    #                     new_df = new_df.sort_values('timestamp')
+                        
+    #                     df_api_data = new_df
+                        
+                
+    #                     chart_trigger.value += 1
+               
+
+    #                 if len(api_data) > 0:
+    #                     last_item = api_data[-1]
+                        
+    #                     s_id = "1600013B" 
+    #                     if s_id in current_state:
+    #                         current_state[s_id]["temp"] = float(last_item.get("temperature", 0))
+    #                         current_state[s_id]["humidity"] = float(last_item.get("humidity", 0))
+    #                         current_state[s_id]["carbon"] = float(last_item.get("pm25", 0)) 
+
+    #             else:
+    #                 print(f"API Error: {response.status_code}")
+
+    #         except Exception as e:
+    #             print(f"Error fetching data: {e}")
+
+    #     except Exception as e:
+    #         print(f"Error fetching data: {e}")
+
     @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
     def fetch_data_from_api(date_range=None, datetime_value=None, location_selector_value="Centru"):
         global df_api_data
 
+        # Ensure location_selector_value is a list (handling initial load)
+        if not isinstance(location_selector_value, list):
+            location_selector_value = [location_selector_value]
+
+        if not location_selector_value:
+            print("No location selected")
+            return
+
         if datetime_picker.disabled:
             datetime_picker.disabled = False
 
-        print(f"location_selector_value: {location_selector_value}")
-
-        deviceId = getDeviceIdsFromSelections(location_selector_value)
-
-        print(f"datetime_value selected: {datetime_value}")
-        print(f"date_range selected: {date_range}")
-            
         start_sec, stop_sec = get_api_intervals(date_range)
+        
+        # Store all dataframes here before concatenating
+        all_data_frames = []
 
-        start = 140341
-        stop = 53941
-
-        # print(f"Fetching historical data from API for range: start={start}, stop={stop}")
-        print(f"Fetching historical data from API for range: start2={start_sec}, stop2={stop_sec}")
-
-
-        try:
-            api_headers = {
-                "X-User-id": USER_ID,
-                "X-User-hash": USER_HASH               
-            }
-
-            api_url = f"{API_URL}/{deviceId}/all/{start_sec}/{stop_sec}"
-            # https://data.uradmonitor.com/api/v1/devices/1600013B/all/920914/834514
-            response = requests.get(api_url, headers=api_headers, timeout=3)
-
-            print("API Request URL:", api_url)
-            print(f"API Response Status: {response.status_code}")
-
+        # --- LOOP THROUGH ALL SELECTED LOCATIONS ---
+        for loc_name in location_selector_value:
             try:
+                # We assume getDeviceIdsFromSelections returns the ID for a specific name
+                # If your function expects a string, we pass loc_name directly
+                deviceId = getDeviceIdsFromSelections(loc_name)
+                
+                if not deviceId:
+                    print(f"No ID found for {loc_name}")
+                    continue
 
-                api_headers = {"X-User-id": USER_ID, "X-User-hash": USER_HASH}
+                api_headers = {
+                    "X-User-id": USER_ID,
+                    "X-User-hash": USER_HASH               
+                }
+
+                api_url = f"{API_URL}/{deviceId}/all/{start_sec}/{stop_sec}"
+                
+                # API Request
                 response = requests.get(api_url, headers=api_headers, timeout=5)
 
                 if response.status_code == 200:
                     api_data = response.json()
                     
                     if isinstance(api_data, list) and len(api_data) > 0:
-
                         new_df = pd.DataFrame(api_data)
                         
                         if 'time' in new_df.columns:
                             new_df['timestamp'] = pd.to_datetime(new_df['time'], unit='s')
-                            
-                        new_df = new_df.sort_values('timestamp')
                         
-                        df_api_data = new_df
+                        # IMPORTANT: Add the location name to this specific data chunk
+                        new_df['Location'] = loc_name 
                         
-                
-                        chart_trigger.value += 1
-               
-
-                    if len(api_data) > 0:
-                        last_item = api_data[-1]
+                        # Append to our list
+                        all_data_frames.append(new_df)
                         
-                        s_id = "1600013B" 
-                        if s_id in current_state:
-                            current_state[s_id]["temp"] = float(last_item.get("temperature", 0))
-                            current_state[s_id]["humidity"] = float(last_item.get("humidity", 0))
-                            current_state[s_id]["carbon"] = float(last_item.get("pm25", 0)) 
-
+                        # Update current state for the map/markers (optional, uses the last point)
+                        if len(api_data) > 0:
+                            last_item = api_data[-1]
+                            # Note: You might need logic here to map deviceId back to metadata IDs if they differ
+                            if deviceId in current_state:
+                                current_state[deviceId]["temp"] = float(last_item.get("temperature", 0))
+                                current_state[deviceId]["humidity"] = float(last_item.get("humidity", 0))
+                                current_state[deviceId]["carbon"] = float(last_item.get("pm25", 0))
                 else:
-                    print(f"API Error: {response.status_code}")
+                    print(f"API Error for {loc_name}: {response.status_code}")
 
             except Exception as e:
-                print(f"Error fetching data: {e}")
+                print(f"Error processing {loc_name}: {e}")
 
-        except Exception as e:
-            print(f"Error fetching data: {e}")
+        # --- COMBINE ALL DATA ---
+        if all_data_frames:
+            combined_df = pd.concat(all_data_frames)
+            combined_df = combined_df.sort_values('timestamp')
+            df_api_data = combined_df
+            
+            # Trigger the chart update
+            chart_trigger.value += 1
+        else:
+            print("No data fetched for any location.")
+            df_api_data = pd.DataFrame()
 
     @pn.depends(checkbox.param.value, checkboxTemperature.param.value, checkboxHumidity.param.value, checkboxCarbon.param.value, watch=True)
     def fetch_data_for_map(all=None, temperature=None, humidity=None, carbon=None):
