@@ -291,9 +291,12 @@ def render_dashboard_page():
     def fetch_data_from_api(date_range=None, datetime_value=None, location_selector_value="Centru"):
         global df_api_data
 
+        chart_container.loading = True
+
         if not isinstance(location_selector_value, list):
             location_selector_value = [location_selector_value]
         if not location_selector_value:
+            chart_container.loading = False
             return
 
         if datetime_picker.disabled:
@@ -338,6 +341,9 @@ def render_dashboard_page():
             chart_trigger.value += 1
         else:
             df_api_data = pd.DataFrame()
+
+        chart_container.loading = False
+
 
     # ── API: current map data ─────────────────────────────────
     @pn.depends(
@@ -433,7 +439,10 @@ def render_dashboard_page():
     # ── Chart updater ─────────────────────────────────────────
     @pn.depends(chart_trigger.param.value, parameter_selector.param.value, watch=True)
     def update_chart_view(c, parameter_selector):
+        chart_container.loading = True   
         chart_container.objects = [get_temperature_plot(parameter_selector)]
+        chart_container.loading = False 
+
 
     # ── Historical analysis card ──────────────────────────────
     historical_card = pn.Column(
