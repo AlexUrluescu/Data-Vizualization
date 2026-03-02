@@ -51,14 +51,31 @@ from configs.routes.v1.pollution_routes import pollution_routes
 from configs.routes.v1.ai_response import traffic_routes
 from configs.routes.v1.parking_spots_routes import parking_spots_routes
 from configs.routes.v1.home_ai_response import traffic_routes_home
+from flask_apscheduler import APScheduler
 
 # Import your Panel pages
 from frontend.panel_app import render_dashboard_page, render_admin_page as panel_admin_page
 
+def my_job():
+    print("Running at 10:45 Romanian time!")
+
 # 1. Create Flask App
 def create_flask_app():
     app = Flask(__name__)
+
+    app.config["SCHEDULER_API_ENABLED"] = False
+    app.config["SCHEDULER_JOB_DEFAULTS"] = {"coalesce": True, "max_instances": 1}
+
+    scheduler = APScheduler()
     CORS(app, resources={r"/api/*": {"origins": "*"}}) 
+
+    @scheduler.task("cron", id="daily_task", hour=10, minute=45, timezone="Europe/Bucharest")
+    def scheduled_job():
+        with scheduler.app.app_context():
+            my_job()
+
+    scheduler.init_app(app)
+    scheduler.start()   
 
     app.register_blueprint(car_routes, url_prefix='/api/v1/cars')
     app.register_blueprint(city_routes, url_prefix='/api/v1/cities')

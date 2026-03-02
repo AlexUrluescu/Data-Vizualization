@@ -35,6 +35,18 @@ wheels = [
 ]
 
 [[package]]
+name = "apscheduler"
+version = "3.11.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/12/3e4389e5920b4c1763390c6d371162f3784f86f85cd6d6c1bfe68eef14e2/apscheduler-3.11.2.tar.gz", hash = "sha256:2a9966b052ec805f020c8c4c3ae6e6a06e24b1bf19f2e11d91d8cca0473eef41", size = 108683, upload-time = "2025-12-22T00:39:34.884Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/64/2e54428beba8d9992aa478bb8f6de9e4ecaa5f8f513bcfd567ed7fb0262d/apscheduler-3.11.2-py3-none-any.whl", hash = "sha256:ce005177f741409db4e4dd40a7431b76feb856b9dd69d57e0da49d6715bfd26d", size = 64439, upload-time = "2025-12-22T00:39:33.303Z" },
+]
+
+[[package]]
 name = "attrs"
 version = "25.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -57,6 +69,7 @@ dependencies = [
     { name = "colorama" },
     { name = "dnspython" },
     { name = "flask" },
+    { name = "flask-apscheduler" },
     { name = "flask-cors" },
     { name = "folium" },
     { name = "google-generativeai" },
@@ -72,6 +85,7 @@ dependencies = [
     { name = "panel" },
     { name = "pymongo" },
     { name = "python-dotenv" },
+    { name = "pytz" },
     { name = "requests" },
     { name = "schedule" },
     { name = "streamz" },
@@ -91,6 +105,7 @@ requires-dist = [
     { name = "colorama", specifier = "==0.4.6" },
     { name = "dnspython", specifier = "==2.8.0" },
     { name = "flask", specifier = "==3.1.2" },
+    { name = "flask-apscheduler", specifier = ">=1.13.1" },
     { name = "flask-cors", specifier = "==6.0.1" },
     { name = "folium", specifier = ">=0.20.0" },
     { name = "google-generativeai", specifier = "==0.8.3" },
@@ -105,6 +120,7 @@ requires-dist = [
     { name = "panel", specifier = ">=1.8.3" },
     { name = "pymongo", specifier = "==4.10.1" },
     { name = "python-dotenv", specifier = "==1.0.0" },
+    { name = "pytz", specifier = ">=2025.2" },
     { name = "requests", specifier = "==2.32.5" },
     { name = "schedule", specifier = ">=1.2.2" },
     { name = "streamz", specifier = ">=0.6.4" },
@@ -489,6 +505,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/dc/6d/cfe3c0fcc5e477df2
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/f9/7f9263c5695f4bd0023734af91bedb2ff8209e8de6ead162f35d8dc762fd/flask-3.1.2-py3-none-any.whl", hash = "sha256:ca1d8112ec8a6158cc29ea4858963350011b5c846a414cdb7a954aa9e967d03c", size = 103308, upload-time = "2025-08-19T21:03:19.499Z" },
 ]
+
+[[package]]
+name = "flask-apscheduler"
+version = "1.13.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apscheduler" },
+    { name = "flask" },
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/23/956b5ffbd1b473fa96ad4aa7918cfbf4616b58f4c9de8c9fd52c6ccf9141/Flask-APScheduler-1.13.1.tar.gz", hash = "sha256:b929846f026fb339b76360b0e4fc75da78b75c6d08625715bd0d37949bd607da", size = 12601, upload-time = "2023-11-07T12:44:20.008Z" }
 
 [[package]]
 name = "flask-cors"
@@ -1951,6 +1978,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/95/32/1a225d6164441be760d75c2c42e2780dc0873fe382da3e98a2e1e48361e5/tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9", size = 196380, upload-time = "2025-03-23T13:54:43.652Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/23/c7abc0ca0a1526a0774eca151daeb8de62ec457e77262b66b359c3c7679e/tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8", size = 347839, upload-time = "2025-03-23T13:54:41.845Z" },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/2e/c14812d3d4d9cd1773c6be938f89e5735a1f11a9f184ac3639b93cef35d5/tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd", size = 30761, upload-time = "2025-03-05T21:17:41.549Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/14/e2a54fabd4f08cd7af1c07030603c3356b74da07f7cc056e600436edfa17/tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d", size = 18026, upload-time = "2025-03-05T21:17:39.857Z" },
 ]
 
 [[package]]
