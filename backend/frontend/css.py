@@ -1,129 +1,263 @@
+
+FONT_IMPORT = """
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@400;500&display=swap');
+"""
+
+global_style = """
+:host, .bk-root, body {
+    font-family: 'DM Sans', sans-serif !important;
+    background: #F7F8FC !important;
+    color: #2D2F3E !important;
+}
+"""
+
+card_style = {
+    "background": "#FFFFFF",
+    "border-radius": "16px",
+    "box-shadow": "0 2px 16px rgba(100, 108, 180, 0.08)",
+    "padding": "20px 24px",
+    "margin-bottom": "16px",
+}
+
+section_header_style = {
+    "border-left": "4px solid #A5B4FC",
+    "padding-left": "12px",
+    "margin-bottom": "8px",
+}
+
+divider_style = """
+.bk-Divider hr {
+    border: none;
+    border-top: 1.5px solid #EEF0FA;
+    margin: 8px 0;
+}
+"""
+
 date_picker_style = """
-/* Stilizăm input-ul propriu-zis (căsuța unde scrie data) */
-:host(.my-date-picker) input.bk-input {
-    background-color: #f0f4f8;      /* Același gri ca la radio buttons */
-    border: 1px solid #d1d9e6;      /* Același border */
-    border-radius: 20px;            /* Rotunjire mare (pill shape) */
-    padding: 6px 15px;
-    font-size: 14px;
-    color: #444;
-    text-align: center;             /* Text centrat */
-    transition: all 0.2s ease;
-    min-height: 35px;               /* Înălțime fixă pentru consistență */
-    max-width: 30%;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap');
+
+:host {
+    font-family: 'DM Sans', sans-serif !important;
 }
 
-/* Efect la hover */
-:host(.my-date-picker) input.bk-input:hover {
-    background-color: #e2e6ea;
-    border-color: #adb5bd;
+/* Container */
+.bk-input-group {
+    background: #FFFFFF !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #E0E4F5 !important;
+    padding: 6px 10px !important;
+    transition: border-color 0.2s;
 }
 
-/* Efect când dai click (focus) */
-:host(.my-date-picker) input.bk-input:focus {
-    border-color: #0072b5;          /* Albastru la activare */
-    box-shadow: 0 0 0 3px rgba(0,114,181,0.2);
+.bk-input-group:focus-within {
+    border-color: #A5B4FC !important;
+    box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.18) !important;
 }
 
-/* Stilizăm eticheta de deasupra (titlul "Date Range Picker") */
-:host(.my-date-picker) label.bk-input-group-label {
-    font-size: 12px;
-    font-weight: bold;
-    color: #666;
-    margin-bottom: 5px;
-    margin-left: 10px; /* Aliniem cu rotunjimea inputului */
+/* Text field */
+.bk-input {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 14px !important;
+    color: #2D2F3E !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* Label */
+label {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: #7B82B4 !important;
+    margin-bottom: 4px !important;
+}
+
+/* Calendar popup */
+.flatpickr-calendar {
+    font-family: 'DM Sans', sans-serif !important;
+    border-radius: 14px !important;
+    border: none !important;
+    box-shadow: 0 8px 32px rgba(100, 108, 180, 0.16) !important;
+    background: #FFFFFF !important;
+    padding: 8px !important;
+}
+
+.flatpickr-months {
+    background: #F0F2FF !important;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 4px !important;
+}
+
+.flatpickr-current-month {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #4B51A0 !important;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: #A5B4FC !important;
+    border-color: #A5B4FC !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+.flatpickr-day.inRange {
+    background: #EEF0FF !important;
+    border-color: transparent !important;
+    color: #4B51A0 !important;
+}
+
+.flatpickr-day:hover {
+    background: #F0F2FF !important;
+}
+
+.flatpickr-weekday {
+    color: #A5B4FC !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
 }
 """
 
+# ── RadioBoxGroup / CheckBoxGroup (parameter & location selectors) ──
 my_custom_style = """
-:host(.location-selector) .bk-input-group {
-    display: flex;
-    gap: 8px; /* Spațiu între butoane */
-    flex-wrap: wrap;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+
+:host {
+    font-family: 'DM Sans', sans-serif !important;
 }
 
-
-
-/* Stilizăm label-ul (butonul vizibil) */
-:host(.location-selector) label {
-    background-color: #f0f4f8;
-    border: 1px solid #d1d9e6;
-    border-radius: 20px;
-    padding: 6px 16px;
-    font-size: 14px;
-    color: #444;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: center;
-    margin: 0 !important; /* Panel adaugă uneori margini default */
+label {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: #7B82B4 !important;
+    margin-bottom: 8px !important;
+    display: block;
 }
 
-/* Hover */
-:host(.location-selector) label:hover {
-    background-color: #e2e6ea;
-    border-color: #adb5bd;
+/* Pill chip styling for each option */
+.bk-input-group {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
 }
 
-/* Când este selectat - folosim pseudo-clasa :has sau logica internă */
-/* NOTA: Panel pune clasa 'active' pe label în versiunile noi */
-:host(.location-selector) label.active, 
-:host(.location-selector) input:checked + label {
-    background-color: #0072b5 !important;
-    color: white !important;
-    border-color: #0072b5 !important;
-    box-shadow: 0 2px 4px rgba(0,114,181,0.3);
+input[type="radio"],
+input[type="checkbox"] {
+    display: none !important;
+}
+
+input[type="radio"] + span,
+input[type="checkbox"] + span {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 6px 14px !important;
+    border-radius: 50px !important;
+    border: 1.5px solid #D6D9F5 !important;
+    background: #F7F8FC !important;
+    color: #5A5F94 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    white-space: nowrap !important;
+}
+
+input[type="radio"]:checked + span,
+input[type="checkbox"]:checked + span {
+    background: #A5B4FC !important;
+    border-color: #A5B4FC !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(165, 180, 252, 0.35) !important;
+}
+
+input[type="radio"] + span:hover,
+input[type="checkbox"] + span:hover {
+    border-color: #A5B4FC !important;
+    background: #EEF0FF !important;
+    color: #4B51A0 !important;
 }
 """
-
 
 checkbox_style_square = """
-/* 1. Resetăm stilul default al browserului pentru input */
-:host(.styled-checkbox) input[type="checkbox"] {
-    appearance: none;           /* Ștergem stilul nativ */
-    -webkit-appearance: none;
-    width: 20px;                /* Dimensiune mai mare */
-    height: 20px;
-    border: 2px solid #b0b8c4;  /* Bordură gri elegantă */
-    border-radius: 4px;         /* Colțuri ușor rotunjite (nu cerc) */
-    background-color: white;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    position: relative;
-    vertical-align: middle;
-    margin-right: 8px;          /* Spațiu până la text */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+
+:host {
+    font-family: 'DM Sans', sans-serif !important;
 }
 
-/* 2. Hover - Când treci cu mouse-ul peste pătrățel */
-:host(.styled-checkbox) input[type="checkbox"]:hover {
-    border-color: #0072b5;      /* Se face albastru la contur */
-    background-color: #f0f8ff;  /* Un albastru foarte palid fundal */
+/* Hide native checkbox */
+input[type="checkbox"] {
+    display: none !important;
 }
 
-/* 3. Checked - Când este bifat */
-:host(.styled-checkbox) input[type="checkbox"]:checked {
-    background-color: #0072b5;  /* Pătrățelul devine plin albastru */
-    border-color: #0072b5;
+/* Custom toggle-chip */
+input[type="checkbox"] + span {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 7px 16px !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #E0E4F5 !important;
+    background: #FFFFFF !important;
+    color: #5A5F94 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
 }
 
-/* 4. Desenăm "bifa" (checkmark-ul alb) în interior */
-:host(.styled-checkbox) input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 6px;
-    top: 2px;
-    width: 5px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;  /* Desenăm L-ul care formează bifa */
-    transform: rotate(45deg);
+input[type="checkbox"] + span::before {
+    content: '' !important;
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: #D6D9F5 !important;
+    flex-shrink: 0 !important;
+    transition: background 0.18s !important;
 }
 
-/* 5. Stilizăm textul de lângă (Label) */
-:host(.styled-checkbox) span {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
-    vertical-align: middle;
-    cursor: pointer;
+input[type="checkbox"]:checked + span {
+    background: #EEF6F0 !important;
+    border-color: #86EFAC !important;
+    color: #22543D !important;
+    font-weight: 600 !important;
+}
+
+input[type="checkbox"]:checked + span::before {
+    background: #4ADE80 !important;
+}
+
+input[type="checkbox"] + span:hover {
+    border-color: #A5B4FC !important;
+    background: #F7F8FF !important;
 }
 """
+
+map_container_style = {
+    "border-radius": "16px",
+    "overflow": "hidden",
+    "box-shadow": "0 2px 16px rgba(100, 108, 180, 0.10)",
+}
+
+chart_container_style = {
+    "background": "#FFFFFF",
+    "border-radius": "16px",
+    "padding": "20px",
+    "box-shadow": "0 2px 16px rgba(100, 108, 180, 0.08)",
+    "min-height": "320px",
+}
+
+def section_label(text: str, emoji: str = "") -> str:
+    return f"### {emoji} {text}" if emoji else f"### {text}"
