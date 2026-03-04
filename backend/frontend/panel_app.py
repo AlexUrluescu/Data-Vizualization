@@ -3,13 +3,13 @@ import folium
 import altair as alt
 import pandas as pd
 import datetime as dt
-import random
-import threading
 import numpy as np
 import requests
 import os
 from dotenv import load_dotenv
-import json
+from db import init_db
+from fetch import fetch_location_data
+from datetime import datetime, timezone
 from .util_functions import getParameter, get_api_intervals, getDeviceIdsFromSelections, generate_popup_content
 from .css import (
     date_picker_style, my_custom_style, checkbox_style_square,
@@ -18,6 +18,7 @@ from .css import (
 )
 
 load_dotenv()
+init_db()
 
 API_URL = os.getenv("API_URL")
 USER_ID = os.getenv("USER_ID")
@@ -299,52 +300,49 @@ def render_dashboard_page():
             chart_container.loading = False
             return
 
+        # ← Guard: if no date range yet, fall back to today
+        if not date_range or date_range[0] is None:
+            date_range = (dt.date.today(), dt.date.today())
+
         if datetime_picker.disabled:
             datetime_picker.disabled = False
 
-        start_sec, stop_sec = get_api_intervals(date_range)
+        start_dt, end_dt = get_api_intervals(date_range)
+
+        if start_dt is None or end_dt is None:
+            chart_container.loading = False
+            return
+
+
         all_data_frames = []
 
         for loc_name in location_selector_value:
             try:
-                deviceId = getDeviceIdsFromSelections(loc_name)
-                if not deviceId:
+                device_id = getDeviceIdsFromSelections(loc_name)
+                if not device_id:
                     continue
 
-                api_headers = {"X-User-id": USER_ID, "X-User-hash": USER_HASH}
-                api_url = f"{API_URL}/{deviceId}/all/{start_sec}/{stop_sec}"
-                response = requests.get(api_url, headers=api_headers, timeout=5)
+                df = fetch_location_data(device_id, loc_name, start_dt, end_dt)
 
-                if response.status_code == 200:
-                    api_data = response.json()
-                    if isinstance(api_data, list) and len(api_data) > 0:
-                        new_df = pd.DataFrame(api_data)
-                        if 'time' in new_df.columns:
-                            new_df['timestamp'] = pd.to_datetime(new_df['time'], unit='s')
-                        new_df['Location'] = loc_name
-                        all_data_frames.append(new_df)
+                if not df.empty:
+                    all_data_frames.append(df)
+                    last = df.iloc[-1]
+                    if device_id in current_state:
+                        current_state[device_id]["temp"]     = float(last.get("temperature") or 0)
+                        current_state[device_id]["humidity"] = float(last.get("humidity") or 0)
+                        current_state[device_id]["carbon"]   = float(last.get("pm25") or 0)
 
-                        if len(api_data) > 0:
-                            last_item = api_data[-1]
-                            if deviceId in current_state:
-                                current_state[deviceId]["temp"]     = float(last_item.get("temperature", 0))
-                                current_state[deviceId]["humidity"] = float(last_item.get("humidity", 0))
-                                current_state[deviceId]["carbon"]   = float(last_item.get("pm25", 0))
-                else:
-                    print(f"API Error for {loc_name}: {response.status_code}")
             except Exception as e:
                 print(f"Error processing {loc_name}: {e}")
 
         if all_data_frames:
-            combined_df = pd.concat(all_data_frames).sort_values('timestamp')
-            df_api_data = combined_df
+            df_api_data = pd.concat(all_data_frames).sort_values("timestamp")
             chart_trigger.value += 1
         else:
             df_api_data = pd.DataFrame()
+            chart_trigger.value += 1  
 
         chart_container.loading = False
-
-
     # ── API: current map data ─────────────────────────────────
     @pn.depends(
         checkbox.param.value,
@@ -396,10 +394,10 @@ def render_dashboard_page():
         m = folium.Map(
             location=[45.7983, 24.1256],
             zoom_start=13,
-            tiles='CartoDB positron',   # clean pastel basemap
+            tiles='CartoDB positron',  
         )
 
-        # Responsive tooltip suppression on mobile
+      
         m.get_root().header.add_child(folium.Element("""
         <style>
             @media (hover: none), (max-width: 768px) {

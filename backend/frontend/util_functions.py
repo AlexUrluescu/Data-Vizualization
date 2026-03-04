@@ -1,4 +1,6 @@
 import datetime as dt
+from datetime import timezone
+import pytz
 
 
 def getParameter(parameter_selector):
@@ -50,23 +52,16 @@ def getDeviceIdsFromSelections(location_selector):
     
 
 
-def get_api_intervals(date_range_tuple):
-    if not date_range_tuple or len(date_range_tuple) != 2:
-        return None, None
-
-    start_date, end_date = date_range_tuple
-    now = dt.datetime.now()
-
-    if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
-        start_date = dt.datetime.combine(start_date, dt.time.min)
-    if isinstance(end_date, dt.date) and not isinstance(end_date, dt.datetime):
-        end_date = dt.datetime.combine(end_date, dt.time.max)
-
-    start_seconds = int((now - start_date).total_seconds())
-    stop_seconds = int((now - end_date).total_seconds())
-
-    return max(0, start_seconds), max(0, stop_seconds)
-
+def get_api_intervals(date_range):
+    tz_local = pytz.timezone("Europe/Bucharest")
+    
+    start_local = dt.datetime.combine(date_range[0], dt.time.min)
+    end_local   = dt.datetime.combine(date_range[1], dt.time.max)
+    
+    start_utc = tz_local.localize(start_local).astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc   = tz_local.localize(end_local).astimezone(timezone.utc).replace(tzinfo=None)
+    
+    return start_utc, end_utc 
 
 
 def generate_popup_content(all_checked, temp_checked, humidity_checked, carbon_checked, senzor_meta, status, temp, humidity, carbon, timestamp_str):
