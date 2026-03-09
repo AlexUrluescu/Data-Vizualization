@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from db import init_db
 from fetch import fetch_location_data
 from datetime import datetime, timezone
+import altair as alt
 from .util_functions import getParameter, get_api_intervals, getDeviceIdsFromSelections, generate_popup_content
 from .css import (
     date_picker_style, my_custom_style, checkbox_style_square,
@@ -17,6 +18,7 @@ from .css import (
     FONT_IMPORT, global_style, section_label, divider_style
 )
 
+alt.data_transformers.disable_max_rows()
 load_dotenv()
 init_db()
 
