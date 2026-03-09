@@ -41,13 +41,17 @@ def getDeviceIdsFromSelections(location_selector):
         if location_selector == 'Centru':
             selected_id = "1600013B"
         if location_selector == 'Caposu':
-            selected_id = "16000284"
+            selected_id = "8200029B"
         if location_selector == 'Vasile Aron':
-            selected_id = "16000343"
-        if location_selector == 'Gusterita':
             selected_id = "16000284"
+        if location_selector == 'Gusterita':
+            selected_id = "16000343"
         if location_selector == 'Selimbar':
             selected_id = "16000342"
+        if location_selector == 'Vestem':
+            selected_id = "16000341"
+        if location_selector == "Mohu":
+            selected_id = "16000344"
         return selected_id
     
 
