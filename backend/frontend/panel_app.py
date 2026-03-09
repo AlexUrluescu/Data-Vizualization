@@ -7,12 +7,13 @@ import numpy as np
 import requests
 import os
 from dotenv import load_dotenv
-from db import init_db
+from db import init_db, list_sensors
 from fetch import fetch_location_data
 from datetime import datetime, timezone
 import altair as alt
-from .util_functions import getParameter, get_api_intervals, getDeviceIdsFromSelections, generate_popup_content
+from .util_functions import getParameter, get_api_intervals, generate_popup_content
 from insights import generate_period_insights
+from .navbar import render_navbar
 from .css import (
     date_picker_style, my_custom_style, checkbox_style_square,
     card_style, chart_container_style, map_container_style,
@@ -27,16 +28,22 @@ API_URL = os.getenv("API_URL")
 USER_ID = os.getenv("USER_ID")
 USER_HASH = os.getenv("USER_HASH")
 
+# metadata_senzori = [
+#     {"id": "1600013B", "name": "Centru", "lat": 45.7982683, "lon": 24.1488102},
+#     {"id": "1600019F", "name": "Terezian", "lat": 45.807144, "lon": 24.145801},
+#     {"id": "16000284", "name": "Vasile Aron", "lat": 45.786566, "lon": 24.16383},
+#     {"id": "16000224", "name": "Tiglari", "lat": 45.80865637, "lon": 24.14074895},
+#     {"id": "16000341", "name": "Vestem", "lat": 45.7163527, "lon": 24.23857099},
+#     {"id": "16000342", "name": "Selimbar", "lat": 45.76698129, "lon": 24.19551811},
+#     {"id": "16000343", "name": "Gusterita", "lat": 45.810222, "lon": 24.179481},
+#     {"id": "16000344", "name": "Mohu", "lat": 45.7429537, "lon": 24.2231919},
+#     {"id": "8200029B", "name": "Caposu", "lat": 45.793112, "lon": 24.152697},
+# ]
+
 metadata_senzori = [
-    {"id": "1600013B", "name": "Centru", "lat": 45.7982683, "lon": 24.1488102},
-    {"id": "1600019F", "name": "Terezian", "lat": 45.807144, "lon": 24.145801},
-    {"id": "16000284", "name": "Vasile Aron", "lat": 45.786566, "lon": 24.16383},
-    {"id": "16000224", "name": "Tiglari", "lat": 45.80865637, "lon": 24.14074895},
-    {"id": "16000341", "name": "Vestem", "lat": 45.7163527, "lon": 24.23857099},
-    {"id": "16000342", "name": "Selimbar", "lat": 45.76698129, "lon": 24.19551811},
-    {"id": "16000343", "name": "Gusterita", "lat": 45.810222, "lon": 24.179481},
-    {"id": "16000344", "name": "Mohu", "lat": 45.7429537, "lon": 24.2231919},
-    {"id": "8200029B", "name": "Caposu", "lat": 45.793112, "lon": 24.152697},
+    {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]}
+    for s in list_sensors()
+    if s["is_active"]  # only active sensors
 ]
 
 current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
@@ -263,6 +270,19 @@ def create_social_media_card(df, parameter_name="pm25"):
 def render_dashboard_page():
     pn.extension('vega')
 
+    metadata_senzori = [
+        {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]}
+        for s in list_sensors()
+        if s["is_active"]
+    ]
+
+    name_to_id = {s["name"]: s["id"] for s in metadata_senzori}
+
+    current_state = {
+        s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0}
+        for s in metadata_senzori
+    }
+
 
     pn.config.raw_css.append(FONT_IMPORT + global_style + divider_style)
 
@@ -291,10 +311,6 @@ def render_dashboard_page():
 
     # Sensor filter card
     filter_card = pn.Column(
-        pn.pane.Markdown(
-            "#### 🗺 Sensor Overlay",
-            styles={"color": "#4B51A0", "margin": "0 0 10px 0", "font-family": "'DM Sans', sans-serif"},
-        ),
         pn.Row(
             checkbox, checkboxTemperature, checkboxHumidity, checkboxCarbon,
             sizing_mode='stretch_width',
@@ -317,8 +333,8 @@ def render_dashboard_page():
 
     location_selector = pn.widgets.CheckBoxGroup(
         name='Locations',
-        options=['Terezian', 'Tiglari', 'Centru', 'Caposu', 'Vasile Aron', 'Gusterita', 'Selimbar'],
-        value=['Centru'],
+        options=[s["name"] for s in metadata_senzori], 
+        value=[metadata_senzori[0]["name"]] if metadata_senzori else [],
         inline=True,
         css_classes=['location-selector'],
         stylesheets=[my_custom_style],
@@ -397,7 +413,7 @@ def render_dashboard_page():
 
         for loc_name in location_selector_value:
             try:
-                device_id = getDeviceIdsFromSelections(loc_name)
+                device_id = name_to_id.get(loc_name, "")
                 if not device_id:
                     continue
 
@@ -458,7 +474,11 @@ def render_dashboard_page():
 
     pn.state.add_periodic_callback(fetch_data_for_map, period=300000)
     pn.state.onload(fetch_data_for_map)
-    pn.state.onload(fetch_data_from_api)
+    pn.state.onload(lambda: fetch_data_from_api(
+        date_range=date_range_picker.value,
+        datetime_value=datetime_picker.value,
+        location_selector_value=location_selector.value,
+    ))
 
     # ── Map renderer ─────────────────────────────────────────
     @pn.depends(
@@ -609,10 +629,10 @@ def render_dashboard_page():
 
     # ── Page header ───────────────────────────────────────────
     header = pn.pane.Markdown(
-        """
-        # 🌿 Air Quality Dashboard
-        Real-time environmental monitoring — Sibiu & surroundings
-        """,
+        # """
+        # # 🌿 Air Quality Dashboard
+        # Real-time environmental monitoring — Sibiu & surroundings
+        # """,
         styles={
             "font-family": "'DM Sans', sans-serif",
             "color": "#2D2F3E",
@@ -625,6 +645,7 @@ def render_dashboard_page():
 
     # ── Root layout ───────────────────────────────────────────
     layout = pn.Column(
+        render_navbar(active="dashboard"),
         counter,
         chart_trigger,
         header,

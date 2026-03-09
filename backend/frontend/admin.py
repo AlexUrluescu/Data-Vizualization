@@ -6,6 +6,7 @@ All container.objects swaps wrapped in pn.io.unlocked().
 import panel as pn
 import pandas as pd
 from auth import current_user, logout, render_login_page
+from .navbar import render_navbar
 from db import (
     list_sensors, upsert_sensor, delete_sensor,
     list_api_keys, add_api_key, toggle_api_key, delete_api_key,
@@ -152,7 +153,10 @@ def _sensors_tab():
                 pn.Column(_lbl("Longitude"), f_lon),
                 sizing_mode="stretch_width", styles={"gap": "12px"},
             ),
+            pn.Row(add_btn),  
+            n,         
             sizing_mode="stretch_width",
+            styles=CARD, 
         ),
         pn.Column(
             pn.pane.Markdown("### Deactivate", styles={"color":"#4B51A0"}),
@@ -420,7 +424,9 @@ def _build_admin_panel(container: pn.Column, user: dict):
 
     with pn.io.unlocked():                     
         container.objects = [pn.Column(
-            top_bar, tabs,
+            render_navbar(active="admin"),
+            top_bar,
+            tabs,
             sizing_mode="stretch_width",
             styles={"max-width":"1200px","margin":"0 auto",
                     "padding":"28px 24px","background":"#F7F8FC"},
