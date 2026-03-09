@@ -12,6 +12,7 @@ from fetch import fetch_location_data
 from datetime import datetime, timezone
 import altair as alt
 from .util_functions import getParameter, get_api_intervals, getDeviceIdsFromSelections, generate_popup_content
+from insights import generate_period_insights
 from .css import (
     date_picker_style, my_custom_style, checkbox_style_square,
     card_style, chart_container_style, map_container_style,
@@ -27,15 +28,15 @@ USER_ID = os.getenv("USER_ID")
 USER_HASH = os.getenv("USER_HASH")
 
 metadata_senzori = [
-    {"id": "1600013B", "name": "Sibiu 1", "lat": 45.7982683, "lon": 24.1488102},
-    {"id": "1600019F", "name": "Sibiu 2", "lat": 45.807144, "lon": 24.145801},
-    {"id": "16000284", "name": "Sibiu 3", "lat": 45.786566, "lon": 24.16383},
-    {"id": "16000224", "name": "Sibiu 4", "lat": 45.80865637, "lon": 24.14074895},
+    {"id": "1600013B", "name": "Centru", "lat": 45.7982683, "lon": 24.1488102},
+    {"id": "1600019F", "name": "Terezian", "lat": 45.807144, "lon": 24.145801},
+    {"id": "16000284", "name": "Vasile Aron", "lat": 45.786566, "lon": 24.16383},
+    {"id": "16000224", "name": "Tiglari", "lat": 45.80865637, "lon": 24.14074895},
     {"id": "16000341", "name": "Vestem", "lat": 45.7163527, "lon": 24.23857099},
     {"id": "16000342", "name": "Selimbar", "lat": 45.76698129, "lon": 24.19551811},
-    {"id": "16000343", "name": "Sibiu 5", "lat": 45.810222, "lon": 24.179481},
+    {"id": "16000343", "name": "Gusterita", "lat": 45.810222, "lon": 24.179481},
     {"id": "16000344", "name": "Mohu", "lat": 45.7429537, "lon": 24.2231919},
-    {"id": "8200029B", "name": "Sibiu 6", "lat": 45.793112, "lon": 24.152697},
+    {"id": "8200029B", "name": "Caposu", "lat": 45.793112, "lon": 24.152697},
 ]
 
 current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
@@ -180,6 +181,82 @@ def get_temperature_plot(parameter_selector):
     )
 
     return pn.pane.Vega(final_chart, sizing_mode='stretch_width')
+
+
+def create_social_media_card(df, parameter_name="pm25"):
+    insights = generate_period_insights(df, parameter_name)
+    
+    if "error" in insights:
+        return pn.pane.Markdown(f"### ⚠️ {insights['error']}", styles={"color": "red"})
+
+    if parameter_name == 'temperature':
+        param_label = "Temperatură"
+        unit = "°C"
+        t_day = "Cea mai călduroasă zi"
+        t_hour = "Ora cea mai caldă (Media)"
+        t_clean = "Zona cea mai răcoroasă"
+        t_worst = "Zona cea mai caldă"
+    elif parameter_name == 'humidity':
+        param_label = "Umiditate"
+        unit = "%"
+        t_day = "Cea mai umedă zi"
+        t_hour = "Ora cea mai umedă (Media)"
+        t_clean = "Zona cea mai uscată"
+        t_worst = "Zona cea mai umedă"
+    else:
+        param_label = "Calitatea Aerului (CO / PM2.5)"
+        unit = "µg/m³" # sau ppm, în funcție de ce citește senzorul exact
+        t_day = "Cea mai poluată zi"
+        t_hour = "Ora de evitat (Poluare maximă)"
+        t_clean = "Zona cea mai curată"
+        t_worst = "Zona cea mai poluată"
+
+    # HTML-ul folosește acum variabilele definite mai sus
+    html_content = f"""
+    <div style="
+        width: 100%; margin: 0 auto; 
+        background: linear-gradient(135deg, #FFFFFF 0%, #F7F8FC 100%);
+        border-radius: 20px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        font-family: 'DM Sans', sans-serif; color: #2D2F3E; border: 1px solid #EEF0FA;">
+        
+        <h2 style="color: #4B51A0; margin-top: 0; font-size: 24px; text-align: center;">
+            📊 Retrospectiva Sibiului
+        </h2>
+        <p style="text-align: center; color: #7B82B4; font-size: 14px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px;">
+            {param_label}
+        </p>
+
+        <div style="background: #FFF; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #FFB8B8; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+            <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_day}</div>
+            <div style="font-size: 18px; font-weight: bold; color: #2D2F3E;">{insights['worst_day_date']} <span style="color: #FF5733; font-size: 16px;">({insights['worst_day_val']} {unit})</span></div>
+        </div>
+
+        <div style="background: #FFF; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #FCD34D; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+            <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_hour}</div>
+            <div style="font-size: 18px; font-weight: bold; color: #2D2F3E;">🕒 {insights['worst_hour_interval']}</div>
+        </div>
+
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1; background: #FFF; border-radius: 12px; padding: 15px; border-left: 5px solid #6EE7B7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_clean}</div>
+                <div style="font-size: 16px; font-weight: bold;">{insights['cleanest_loc']}</div>
+            </div>
+            <div style="flex: 1; background: #FFF; border-radius: 12px; padding: 15px; border-left: 5px solid #FCA5A5; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_worst}</div>
+                <div style="font-size: 16px; font-weight: bold;">{insights['worst_loc']}</div>
+            </div>
+        </div>
+
+        <div style="background: #EEF0FF; border-radius: 12px; padding: 20px; text-align: center; color: #4B51A0;">
+            <i>{insights['weekend_comparison'].replace('**', '<b>').replace('**', '</b>')}</i>
+        </div>
+        
+        <div style="text-align: center; margin-top: 25px; font-size: 11px; color: #A5B4FC;">
+            Generat automat prin Urban Bike Data
+        </div>
+    </div>
+    """
+    return pn.pane.HTML(html_content, sizing_mode='stretch_width')
 
 
 # ── Dashboard page ─────────────────────────────────────────────
@@ -506,11 +583,35 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
+    infographic_container = pn.Column(
+        pn.pane.Markdown("Selectează datele de mai sus și așteaptă încărcarea pentru a genera raportul.", styles={"color": "#7B82B4"}),
+        sizing_mode='stretch_width',
+        align='center'
+    )
+
+    @pn.depends(chart_trigger.param.value, parameter_selector.param.value, watch=True)
+    def update_infographic(c, parameter_selector):
+        global df_api_data
+        if not df_api_data.empty:
+            param_col = "temperature"
+            if parameter_selector == 'Humidity': param_col = "humidity"
+            if parameter_selector == 'Carbon Monoxide': param_col = "pm25"
+            
+            infographic_container.objects = [create_social_media_card(df_api_data, param_col)]
+        else:
+             infographic_container.objects = [pn.pane.Markdown("Nu sunt date suficiente.", styles={"color": "#7B82B4"})]
+
+    report_card = pn.Column(
+        pn.pane.Markdown("## 📱 Raport Social Media", styles={"font-family": "'DM Sans', sans-serif", "color": "#2D2F3E"}),
+        infographic_container,
+        styles=card_style,
+    )
+
     # ── Page header ───────────────────────────────────────────
     header = pn.pane.Markdown(
         """
-# 🌿 Air Quality Dashboard
-Real-time environmental monitoring — Sibiu & surroundings
+        # 🌿 Air Quality Dashboard
+        Real-time environmental monitoring — Sibiu & surroundings
         """,
         styles={
             "font-family": "'DM Sans', sans-serif",
@@ -529,6 +630,7 @@ Real-time environmental monitoring — Sibiu & surroundings
         header,
         map_card,
         historical_card,
+        report_card,
         sizing_mode='stretch_width',
         styles={
             "max-width": "1280px",
