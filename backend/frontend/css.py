@@ -4,9 +4,13 @@ FONT_IMPORT = """
 """
 
 global_style = """
-:host, .bk-root, body {
+body {
     font-family: 'DM Sans', sans-serif !important;
     background: #F7F8FC !important;
+    color: #2D2F3E !important;
+}
+:host, .bk-root {
+    font-family: 'DM Sans', sans-serif !important;
     color: #2D2F3E !important;
 }
 """

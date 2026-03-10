@@ -599,7 +599,7 @@ def render_dashboard_page():
         ),
         filter_card,
         get_map,
-        styles=card_style,
+        styles={**card_style, "background": "#FFFFFF"},
         sizing_mode='stretch_width',
     )
 
@@ -645,7 +645,7 @@ def render_dashboard_page():
 
     # ── Root layout ───────────────────────────────────────────
     layout = pn.Column(
-        render_navbar(active="dashboard"),
+        render_navbar(active="dashboard", title="🌿 **Urban Bike Data**"),
         counter,
         chart_trigger,
         header,

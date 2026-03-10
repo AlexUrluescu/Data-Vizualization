@@ -49,7 +49,7 @@ def _nav_btn(label: str, href: str, active: bool = False):
     return btn
 
 
-def render_navbar(active: str = "dashboard") -> pn.Row:
+def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
     """
     Parameters
     ----------
@@ -62,7 +62,7 @@ def render_navbar(active: str = "dashboard") -> pn.Row:
 
     # ── Logo / brand ─────────────────────────────────────────
     brand = pn.pane.Markdown(
-        "🌿 **Urban Bike Data**",
+        title,
         styles={
             "font-family": "'DM Sans', sans-serif",
             "font-size": "16px",
@@ -147,6 +147,7 @@ def render_navbar(active: str = "dashboard") -> pn.Row:
             "position": "sticky",
             "top": "0",
             "z-index": "100",
+            "border-radius": "15px"
         },
     )
 

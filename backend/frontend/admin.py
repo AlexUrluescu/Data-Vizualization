@@ -6,7 +6,6 @@ All container.objects swaps wrapped in pn.io.unlocked().
 import panel as pn
 import pandas as pd
 from auth import current_user, logout, render_login_page
-from .navbar import render_navbar
 from db import (
     list_sensors, upsert_sensor, delete_sensor,
     list_api_keys, add_api_key, toggle_api_key, delete_api_key,
@@ -392,22 +391,27 @@ def _build_admin_panel(container: pn.Column, user: dict):
             )]
     logout_btn.on_click(on_logout)
 
-    top_bar = pn.Row(
-        pn.pane.Markdown("# 🛠 Admin Panel",
-                         styles={"font-family":"'DM Sans',sans-serif","color":"#2D2F3E"}),
-        pn.Spacer(sizing_mode="stretch_width"),
-        pn.pane.Markdown(
-            f"👤 **{user['username']}** · `{user['role']}`",
-            styles={"color":"#7B82B4","font-size":"13px","align-self":"center",
-                    "font-family":"'DM Sans',sans-serif"},
-        ),
-        back_btn, logout_btn,
+    top_bar = pn.pane.HTML(
+        f"""
+        <div style="display:flex; align-items:center; gap:12px;
+                    border-bottom:2px solid #EEF0FA; padding:16px 25px;
+                    margin-bottom:20px; background:#fff; font-family:'DM Sans',sans-serif;border-radius: 10px">
+            <span style="font-size:20px; font-weight:700; color:#2D2F3E;">🛠 Admin Panel</span>
+            <span style="flex:1;"></span>
+            <span style="color:#7B82B4; font-size:13px; white-space:nowrap;">
+                👤 <b>{user['username']}</b> · <code style="font-family:'DM Mono',monospace">{user['role']}</code>
+            </span>
+            <a href="/" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+                border-radius:8px; border:1.5px solid #4B51A0; background:#fff; color:#4B51A0;
+                padding:7px 18px; cursor:pointer; text-decoration:none;">← Dashboard</a>
+            <button onclick="fetch('/logout', {{method:'POST'}}).then(()=>window.location.href='/admin-panel')"
+                style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+                border-radius:8px; border:1.5px solid #FCA5A5; background:#FEE2E2; color:#EF4444;
+                padding:7px 18px; cursor:pointer;">Sign out</button>
+        </div>
+        """,
         sizing_mode="stretch_width",
-        styles={"align-items":"center","gap":"12px",
-                "border-bottom":"2px solid #EEF0FA",
-                "padding-bottom":"16px","margin-bottom":"20px"},
     )
-
     tabs = pn.Tabs(
         ("📡 Sensors",  _sensors_tab()),
         ("🔑 API Keys", _api_keys_tab()),
@@ -424,7 +428,6 @@ def _build_admin_panel(container: pn.Column, user: dict):
 
     with pn.io.unlocked():                     
         container.objects = [pn.Column(
-            render_navbar(active="admin"),
             top_bar,
             tabs,
             sizing_mode="stretch_width",
