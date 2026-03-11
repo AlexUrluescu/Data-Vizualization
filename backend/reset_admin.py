@@ -1,7 +1,7 @@
 
 import sqlite3, hashlib
 
-new_password = "sibiu2026"
+new_password = "urbanbike2026"
 new_hash = hashlib.sha256(new_password.encode()).hexdigest()
 
 conn = sqlite3.connect("air_quality.db")
