@@ -65,29 +65,19 @@ def create_flask_app():
 flask_app = create_flask_app()
 
 def run_server():
-    port       = int(os.environ.get("PORT", 5001))
-    public_url = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
 
-    allow_origins = [
-        public_url,
-        f"{public_url}:{port}",
-        "127.0.0.1",
-        "127.0.0.1:5001",
-        "localhost",
-        "localhost:5001",
-        "0.0.0.0:5001",
-    ]
+    port = int(os.environ.get("PORT", 7860))
 
     print(f"🚀 Starting Server on port {port}...")
 
     server = pn.serve(
         {
             "/dashboard":   render_dashboard_page,
-            "/admin-panel": panel_admin_page,   # ← directly, no wrapper
+            "/admin-panel": panel_admin_page,   
         },
         port=port,
         address="0.0.0.0",
-        allow_websocket_origin=allow_origins,
+        websocket_origin=["*"], 
         show=False,
         start=False,
     )
