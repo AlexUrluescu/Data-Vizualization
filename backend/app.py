@@ -3,19 +3,10 @@ import os
 import panel as pn
 from flask import Flask
 from flask_cors import CORS
-
 from tornado.wsgi import WSGIContainer
 from tornado.web import FallbackHandler
-
-from configs.routes.v1.car_routes import car_routes
 from configs.routes.v1.render_home import render_home_page
 from configs.routes.v1.render_admin import render_admin_page
-from configs.routes.v1.city_routes import city_routes
-from configs.routes.v1.population_routes import population_routes
-from configs.routes.v1.pollution_routes import pollution_routes
-from configs.routes.v1.ai_response import traffic_routes
-from configs.routes.v1.parking_spots_routes import parking_spots_routes
-from configs.routes.v1.home_ai_response import traffic_routes_home
 from flask_apscheduler import APScheduler
 
 from frontend.panel_app import render_dashboard_page
@@ -49,13 +40,6 @@ def create_flask_app():
     scheduler.init_app(app)
     scheduler.start()
 
-    app.register_blueprint(car_routes,              url_prefix='/api/v1/cars')
-    app.register_blueprint(city_routes,             url_prefix='/api/v1/cities')
-    app.register_blueprint(population_routes,       url_prefix='/api/v1/population')
-    app.register_blueprint(pollution_routes,        url_prefix='/api/v1/pollution')
-    app.register_blueprint(traffic_routes,          url_prefix="/api/v1/traffic-chat-bot")
-    app.register_blueprint(parking_spots_routes,    url_prefix='/api/v1/parking_spots')
-    app.register_blueprint(traffic_routes_home,     url_prefix="/api/v1/traffic-chat-bot-home")
     app.register_blueprint(render_home_page,        url_prefix="/")
     app.register_blueprint(render_admin_page,       url_prefix="/admin")
 
