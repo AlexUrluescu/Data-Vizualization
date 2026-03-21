@@ -1,4 +1,5 @@
 import os
+import secrets
 import sqlite3
 import hashlib
 import pandas as pd
@@ -98,11 +99,16 @@ def init_db():
                 label      TEXT NOT NULL,
                 user_id    TEXT NOT NULL,
                 user_hash  TEXT NOT NULL,
-                api_url    TEXT NOT NULL,
+                api_url    TEXT NOT NULL DEFAULT '',
                 is_active  INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT    NOT NULL
+                created_at TEXT    NOT NULL,
+                key_type   TEXT    NOT NULL DEFAULT 'external'
             )
         """)
+        # migrate existing tables that predate the key_type column
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(api_keys)").fetchall()}
+        if "key_type" not in existing:
+            conn.execute("ALTER TABLE api_keys ADD COLUMN key_type TEXT NOT NULL DEFAULT 'external'")
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS app_configs (
@@ -231,9 +237,14 @@ def _create_user_conn(conn, username: str, password: str, role: str = "viewer"):
 
 def create_user(username: str, password: str, role: str = "viewer") -> dict:
     try:
+        plain_secret = secrets.token_hex(32)
         with get_conn() as conn:
             _create_user_conn(conn, username, password, role)
-        return {"ok": True}
+            conn.execute("""
+                INSERT INTO api_keys (label, user_id, user_hash, api_url, created_at, key_type)
+                VALUES (?, ?, ?, '', ?, 'user')
+            """, (f"auto:{username}", username, plain_secret, datetime.utcnow().isoformat()))
+        return {"ok": True, "secret": plain_secret}
     except sqlite3.IntegrityError:
         return {"ok": False, "error": "Username already exists"}
 
@@ -298,12 +309,12 @@ def delete_sensor(sensor_id: str):
 # New: API Keys
 # ══════════════════════════════════════════════════════════════
 
-def add_api_key(label: str, user_id: str, user_hash: str, api_url: str):
+def add_api_key(label: str, user_id: str, user_hash: str, api_url: str, key_type: str = "external"):
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO api_keys (label, user_id, user_hash, api_url, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (label, user_id, user_hash, api_url, datetime.utcnow().isoformat()))
+            INSERT INTO api_keys (label, user_id, user_hash, api_url, created_at, key_type)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (label, user_id, user_hash, api_url, datetime.utcnow().isoformat(), key_type))
 
 
 def list_api_keys() -> list[dict]:
@@ -320,6 +331,18 @@ def toggle_api_key(key_id: int, active: bool):
 def delete_api_key(key_id: int):
     with get_conn() as conn:
         conn.execute("DELETE FROM api_keys WHERE id=?", (key_id,))
+
+
+def validate_api_secret(secret: str) -> dict | None:
+    """Returns the api_keys row if the secret is valid and active, else None."""
+    if not secret:
+        return None
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM api_keys WHERE user_hash=? AND is_active=1 AND key_type='user'",
+            (secret,),
+        ).fetchone()
+    return dict(row) if row else None
 
 
 # ══════════════════════════════════════════════════════════════

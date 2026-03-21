@@ -315,6 +315,8 @@ def _users_tab():
                                sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
     add_btn = pn.widgets.Button(name="➕ Create User", button_type="primary", stylesheets=[_btn()])
 
+    secret_modal = pn.pane.HTML("", width=0, height=0, margin=0)
+
     def on_add(e):
         u, p, r = f_usr.value.strip(), f_pwd.value.strip(), f_role.value
         if not u or not p: return _err(n, "Username and password required.")
@@ -324,6 +326,28 @@ def _users_tab():
             _ok(n, f"User **{u}** created as `{r}`.")
             f_usr.value = f_pwd.value = ""
             refresh()
+            secret = res["secret"]
+            secret_modal.width  = 0
+            secret_modal.height = 0
+            secret_modal.object = f"""
+<script>
+(function() {{
+  var overlay = document.createElement('div');
+  overlay.id = 'secret-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(30,32,60,.55);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:DM Sans,sans-serif;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;box-shadow:0 8px 48px rgba(75,81,160,.18);padding:36px 32px 28px;max-width:520px;width:92%;position:relative;">
+      <div style="font-size:18px;font-weight:700;color:#2D2F3E;margin-bottom:6px;">🔑 User Secret Generated</div>
+      <div style="color:#7B82B4;font-size:13px;margin-bottom:18px;">Copy this secret and give it to the user — <b>it will not be shown again.</b></div>
+      <div style="background:#F0F2FF;border:1.5px solid #C7CAEE;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <code id="secret-val" style="font-family:DM Mono,monospace;font-size:13px;color:#2D2F3E;word-break:break-all;flex:1;">{secret}</code>
+        <button onclick="navigator.clipboard.writeText('{secret}').then(()=>this.textContent='✓ Copied')" style="font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;border-radius:7px;border:1.5px solid #6366F1;background:#fff;color:#6366F1;padding:6px 14px;cursor:pointer;white-space:nowrap;">Copy</button>
+      </div>
+      <button onclick="document.getElementById('secret-modal-overlay').remove()" style="font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;border-radius:8px;border:none;background:#6366F1;color:#fff;padding:9px 28px;cursor:pointer;">Done</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}})();
+</script>"""
         else:
             _err(n, res["error"])
     add_btn.on_click(on_add)
@@ -351,6 +375,7 @@ def _users_tab():
     d_btn.on_click(on_deact)
 
     return pn.Column(
+        secret_modal,
         pn.pane.Markdown("## 👤 User Management", styles=SECTION_TITLE),
         pn.layout.Divider(),
         pn.Column(

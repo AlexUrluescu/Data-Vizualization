@@ -1,7 +1,8 @@
 
 import os
+import functools
 import panel as pn
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tornado.wsgi import WSGIContainer
 from tornado.web import FallbackHandler
@@ -14,6 +15,19 @@ from frontend.panel_app import render_dashboard_page
 # ── Import nou: auth + admin panel ───────────────────────────
 from auth import current_user, render_login_page
 from frontend.admin import render_admin_page as panel_admin_page
+from db import validate_api_secret
+
+
+def require_api_secret(f):
+    """Decorator — protects a Flask route with ?secret= query param validation.
+    Apply only to REST API endpoints that need it. Never used on Panel or public routes."""
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        secret = request.args.get("secret", "")
+        if not validate_api_secret(secret):
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
 
 def my_job():
