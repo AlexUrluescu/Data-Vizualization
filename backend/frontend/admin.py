@@ -383,34 +383,37 @@ def _build_admin_panel(container: pn.Column, user: dict):
     logout_btn = pn.widgets.Button(name="Sign out", button_type="light",
                                    stylesheets=[_btn("#FEE2E2", "#EF4444")])
 
+    _redirect = pn.pane.HTML("", width=0, height=0, margin=0)
+
     def on_logout(e):
         logout()
-        with pn.io.unlocked():
-            container.objects = [render_login_page(
-                on_success=lambda u: _swap_to_admin(container, u)
-            )]
+        _redirect.object = "<script>window.location.href='/';</script>"
     logout_btn.on_click(on_logout)
 
-    top_bar = pn.pane.HTML(
-        f"""
-        <div style="display:flex; align-items:center; gap:12px;
-                    border-bottom:2px solid #EEF0FA; padding:16px 25px;
-                    margin-bottom:20px; background:#fff; font-family:'DM Sans',sans-serif;border-radius: 10px">
-            <span style="font-size:20px; font-weight:700; color:#2D2F3E;">🛠 Admin Panel</span>
+    top_bar = pn.Row(
+        _redirect,
+        pn.pane.HTML(
+            f"""
+            <span style="font-size:20px; font-weight:700; color:#2D2F3E; font-family:'DM Sans',sans-serif;">
+                🛠 Admin Panel
+            </span>
             <span style="flex:1;"></span>
-            <span style="color:#7B82B4; font-size:13px; white-space:nowrap;">
+            <span style="color:#7B82B4; font-size:13px; white-space:nowrap; font-family:'DM Sans',sans-serif;">
                 👤 <b>{user['username']}</b> · <code style="font-family:'DM Mono',monospace">{user['role']}</code>
             </span>
-            <a href="/" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
-                border-radius:8px; border:1.5px solid #4B51A0; background:#fff; color:#4B51A0;
-                padding:7px 18px; cursor:pointer; text-decoration:none;">← Dashboard</a>
-            <button onclick="fetch('/logout', {{method:'POST'}}).then(()=>window.location.href='/admin-panel')"
-                style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
-                border-radius:8px; border:1.5px solid #FCA5A5; background:#FEE2E2; color:#EF4444;
-                padding:7px 18px; cursor:pointer;">Sign out</button>
-        </div>
-        """,
+            """,
+            sizing_mode="stretch_width",
+            styles={"display": "flex", "align-items": "center", "gap": "12px"},
+        ),
+        back_btn,
+        logout_btn,
         sizing_mode="stretch_width",
+        styles={
+            "background": "#FFFFFF", "border-radius": "14px",
+            "box-shadow": "0 2px 20px rgba(75,81,160,0.07)",
+            "padding": "16px 25px", "margin-bottom": "20px",
+            "align-items": "center",
+        },
     )
     tabs = pn.Tabs(
         ("📡 Sensors",  _sensors_tab()),
