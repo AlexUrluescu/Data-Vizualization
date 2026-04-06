@@ -1,6 +1,6 @@
 import panel as pn
 import datetime as dt
-from auth import current_user, render_login_page
+from auth import current_user
 from db import get_user_api_keys, verify_password, update_user_password
 from .navbar import render_navbar
 
@@ -247,37 +247,15 @@ def _change_password_card(user: dict) -> pn.Column:
 def render_settings_page() -> pn.viewable.Viewable:
     pn.config.raw_css.append(FONT_IMPORT + GLOBAL_CSS)
 
-    container = pn.Column(
-        sizing_mode="stretch_width",
-        styles={"background": "#F7F8FC", "min-height": "100vh"},
-    )
-
     user = current_user()
 
     if user is None:
-        def on_login(u):
-            if u.get("role") == "admin":
-                with pn.io.unlocked():
-                    container.objects = [
-                        pn.pane.HTML(
-                            '<script>window.location.href = "/admin-panel";</script>',
-                            width=0, height=0, margin=0,
-                        )
-                    ]
-                return
-            with pn.io.unlocked():
-                container.objects = [
-                    pn.pane.HTML(
-                        '<script>window.location.href = "/settings";</script>',
-                        width=0, height=0, margin=0,
-                    )
-                ]
+        return pn.pane.HTML(
+            '<script>window.location.href = "/login";</script>',
+            width=0, height=0, margin=0,
+        )
 
-        container.objects = [render_login_page(on_success=on_login)]
-        return container
-
-    container.objects = [_build_settings(user)]
-    return container
+    return _build_settings(user)
 
 
 def _build_settings(user: dict) -> pn.Column:

@@ -1,6 +1,6 @@
 import panel as pn
 import pandas as pd
-from auth import current_user, logout, render_login_page
+from auth import current_user, logout
 from db import (
     list_sensors, upsert_sensor, delete_sensor,
     list_api_keys, add_api_key, toggle_api_key, delete_api_key,
@@ -444,27 +444,26 @@ def _swap_to_admin(container: pn.Column, user: dict):
 
 
 def render_admin_page() -> pn.viewable.Viewable:
-    pn.extension('tabulator') 
+    pn.extension('tabulator')
     pn.config.raw_css.append(FONT_IMPORT + GLOBAL_CSS)
-
-    container = pn.Column(
-        sizing_mode="stretch_width",
-        styles={"background":"#F7F8FC","min-height":"100vh"},
-    )
 
     user = current_user()
 
     if user is None:
-        container.objects = [render_login_page(
-            on_success=lambda u: _swap_to_admin(container, u)
-        )]
-    elif user.get("role") != "admin":
-        container.objects = [pn.pane.Markdown(
-            "## 🚫 Access Denied\nAi nevoie de privilegii **admin**.",
-            styles={"color":"#EF4444","padding":"80px 40px",
-                    "font-family":"'DM Sans',sans-serif","text-align":"center"},
-        )]
-    else:
-        _build_admin_panel(container, user)
+        return pn.pane.HTML(
+            '<script>window.location.href = "/login";</script>',
+            width=0, height=0, margin=0,
+        )
 
+    if user.get("role") != "admin":
+        return pn.pane.HTML(
+            '<script>window.location.href = "/";</script>',
+            width=0, height=0, margin=0,
+        )
+
+    container = pn.Column(
+        sizing_mode="stretch_width",
+        styles={"background": "#F7F8FC", "min-height": "100vh"},
+    )
+    _build_admin_panel(container, user)
     return container

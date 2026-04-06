@@ -114,7 +114,7 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
             styles={"gap": "12px", "align-items": "center"},
         )
     else:
-        right_side = _nav_btn("🔑 Login", "/settings")
+        right_side = _nav_btn("🔑 Login", "/login")
 
     navbar = pn.Row(
         brand,
