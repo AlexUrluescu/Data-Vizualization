@@ -1,5 +1,5 @@
 import panel as pn
-from auth import current_user, logout
+from auth import current_user
 
 FONT_IMPORT = (
     "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700"
@@ -97,23 +97,16 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
             stylesheets=["""
             :host button {
                 font-family: 'DM Sans', sans-serif !important;
-                font-size: 12px !important;
-                font-weight: 600 !important;
+                font-size: 12px !important; font-weight: 600 !important;
                 border-radius: 8px !important;
                 border: 1.5px solid #FCA5A5 !important;
-                background: #FFF1F2 !important;
-                color: #EF4444 !important;
-                padding: 6px 14px !important;
-                cursor: pointer !important;
+                background: #FFF1F2 !important; color: #EF4444 !important;
+                padding: 6px 14px !important; cursor: pointer !important;
             }
             :host button:hover { background: #FEE2E2 !important; }
             """],
         )
-
-        def on_logout(e):
-            logout()
-            pn.state.location.reload = True
-        logout_btn.on_click(on_logout)
+        logout_btn.js_on_click(code="window.location.href = '/logout';")
 
         right_side = pn.Row(
             user_info,
@@ -122,7 +115,6 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
         )
     else:
         right_side = _nav_btn("🔑 Login", "/settings")
-
 
     navbar = pn.Row(
         brand,

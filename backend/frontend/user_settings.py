@@ -1,6 +1,6 @@
 import panel as pn
 import datetime as dt
-from auth import current_user, logout
+from auth import current_user, render_login_page
 from db import get_user_api_keys, verify_password, update_user_password
 from .navbar import render_navbar
 
@@ -33,16 +33,12 @@ INPUT_CSS = """
 :host input:focus { border-color: #6366F1 !important; outline: none !important; background: #fff !important; }
 """
 
-# ── JS injected ONCE via a zero-size HTML pane ────────────────
-# Functions are attached to `window` so that onclick="window.fn(...)"
-# attributes inside any pn.pane.HTML can reach them.
 SETTINGS_JS = """
 <script>
 (function () {
-    if (window.__ubdSettingsJs) return;   // guard: only register once
+    if (window.__ubdSettingsJs) return;
     window.__ubdSettingsJs = true;
 
-    /* ── clipboard with textarea fallback (works on plain HTTP too) ── */
     function _copy(text, btn, doneLabel) {
         var orig = btn.textContent;
         function ok() {
@@ -65,7 +61,6 @@ SETTINGS_JS = """
         document.body.removeChild(ta);
     }
 
-    /* called by single-field copy buttons */
     window.copyText = function (text, btn) { _copy(text, btn, '✓'); };
 }());
 </script>
@@ -79,17 +74,28 @@ def _btn(label, bg="#6366F1", fg="#fff", width=None):
            f"padding:7px 18px!important;cursor:pointer!important;transition:opacity .15s!important;}}"
            f":host button:hover{{opacity:.82!important;}}")
     kw = {"name": label, "button_type": "light", "stylesheets": [css]}
-    if width: kw["width"] = width
+    if width:
+        kw["width"] = width
     return pn.widgets.Button(**kw)
+
 
 def _lbl(text):
     return pn.pane.Markdown(f"**{text}**", styles=SUBLABEL)
 
+
 def _notice():
-    return pn.pane.Markdown("", styles={"color":"#22C55E","font-size":"13px",
-                                        "font-family":"'DM Sans',sans-serif","min-height":"20px"})
-def _ok(n, msg):  n.styles = {**n.styles, "color": "#22C55E"}; n.object = f"✓ {msg}"
-def _err(n, msg): n.styles = {**n.styles, "color": "#EF4444"}; n.object = f"⚠ {msg}"
+    return pn.pane.Markdown("", styles={"color": "#22C55E", "font-size": "13px",
+                                        "font-family": "'DM Sans',sans-serif", "min-height": "20px"})
+
+
+def _ok(n, msg):
+    n.styles = {**n.styles, "color": "#22C55E"}
+    n.object = f"✓ {msg}"
+
+
+def _err(n, msg):
+    n.styles = {**n.styles, "color": "#EF4444"}
+    n.object = f"⚠ {msg}"
 
 
 def _credential_card(key: dict) -> pn.pane.HTML:
@@ -106,8 +112,8 @@ def _credential_card(key: dict) -> pn.pane.HTML:
         'padding:2px 10px;font-size:11px;font-weight:600;">○ Inactive</span>'
     )
 
-
-    def _sq(v):  return v.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+    def _sq(v):
+        return v.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
 
     def _copy_btn(value, icon="⎘"):
         return (f'<button onclick="window.copyText(\'{_sq(value)}\',this)" '
@@ -118,14 +124,11 @@ def _credential_card(key: dict) -> pn.pane.HTML:
 <div style="background:#fff;border-radius:14px;border:1.5px solid #EEF0FA;
             padding:24px 28px;margin-bottom:16px;
             box-shadow:0 2px 16px rgba(75,81,160,0.06);font-family:'DM Sans',sans-serif;">
-
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
     <span style="font-size:18px;font-weight:700;color:#2D2F3E;">🔑 {label}</span>
     {active_badge}
   </div>
-
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
-
     <div style="background:#F7F8FC;border-radius:10px;padding:14px 16px;border:1px solid #E8EBFA;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;
                    color:#7B82B4;margin-bottom:6px;font-weight:600;">X-User-id</div>
@@ -135,7 +138,6 @@ def _credential_card(key: dict) -> pn.pane.HTML:
         {_copy_btn(uid)}
       </div>
     </div>
-
     <div style="background:#F7F8FC;border-radius:10px;padding:14px 16px;border:1px solid #E8EBFA;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;
                    color:#7B82B4;margin-bottom:6px;font-weight:600;">X-User-hash</div>
@@ -149,7 +151,6 @@ def _credential_card(key: dict) -> pn.pane.HTML:
       </div>
       <div style="font-size:10px;color:#A5B4FC;margin-top:5px;">Hover to reveal</div>
     </div>
-
     <div style="grid-column:span 2;background:#F7F8FC;border-radius:10px;
                 padding:14px 16px;border:1px solid #E8EBFA;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;
@@ -161,12 +162,9 @@ def _credential_card(key: dict) -> pn.pane.HTML:
       </div>
     </div>
   </div>
-
 </div>
 """
-  
     return pn.pane.HTML(html, sizing_mode="stretch_width")
-
 
 
 def _profile_card(user: dict) -> pn.pane.HTML:
@@ -208,12 +206,11 @@ def _profile_card(user: dict) -> pn.pane.HTML:
     return pn.pane.HTML(html, sizing_mode="stretch_width")
 
 
-
 def _change_password_card(user: dict) -> pn.Column:
-    n        = _notice()
-    old_pw   = pn.widgets.PasswordInput(placeholder="Current password",           sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    new_pw   = pn.widgets.PasswordInput(placeholder="New password (min. 8 chars)", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    conf_pw  = pn.widgets.PasswordInput(placeholder="Confirm new password",        sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    n       = _notice()
+    old_pw  = pn.widgets.PasswordInput(placeholder="Current password",            sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    new_pw  = pn.widgets.PasswordInput(placeholder="New password (min. 8 chars)", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    conf_pw = pn.widgets.PasswordInput(placeholder="Confirm new password",         sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
     save_btn = _btn("💾 Update Password")
 
     def on_save(e):
@@ -241,11 +238,10 @@ def _change_password_card(user: dict) -> pn.Column:
             pn.Column(_lbl("Confirm"),          conf_pw, sizing_mode="stretch_width"),
             sizing_mode="stretch_width", styles={"gap": "14px"},
         ),
-        pn.Row(save_btn, n, styles={"align-items":"center","gap":"16px","margin-top":"4px"}),
+        pn.Row(save_btn, n, styles={"align-items": "center", "gap": "16px", "margin-top": "4px"}),
         sizing_mode="stretch_width",
         styles=CARD,
     )
-
 
 
 def render_settings_page() -> pn.viewable.Viewable:
@@ -255,17 +251,27 @@ def render_settings_page() -> pn.viewable.Viewable:
         sizing_mode="stretch_width",
         styles={"background": "#F7F8FC", "min-height": "100vh"},
     )
+
     user = current_user()
 
     if user is None:
-        from auth import render_login_page
-
         def on_login(u):
             if u.get("role") == "admin":
-                pn.state.location.pathname = "/admin-panel"
+                with pn.io.unlocked():
+                    container.objects = [
+                        pn.pane.HTML(
+                            '<script>window.location.href = "/admin-panel";</script>',
+                            width=0, height=0, margin=0,
+                        )
+                    ]
                 return
             with pn.io.unlocked():
-                container.objects = [_build_settings(u)]
+                container.objects = [
+                    pn.pane.HTML(
+                        '<script>window.location.href = "/settings";</script>',
+                        width=0, height=0, margin=0,
+                    )
+                ]
 
         container.objects = [render_login_page(on_success=on_login)]
         return container
@@ -303,7 +309,6 @@ def _build_settings(user: dict) -> pn.Column:
 
     return pn.Column(
         render_navbar(active="settings", title="🌿 **Urban Bike Data**"),
-
         pn.Column(
             _profile_card(user),
             credentials_card,

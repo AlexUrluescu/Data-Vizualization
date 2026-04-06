@@ -398,10 +398,10 @@ def _build_admin_panel(container: pn.Column, user: dict):
             <a href="/" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
                 border-radius:8px; border:1.5px solid #4B51A0; background:#fff; color:#4B51A0;
                 padding:7px 18px; cursor:pointer; text-decoration:none;">← Dashboard</a>
-            <button onclick="fetch('/logout', {{method:'POST'}}).then(()=>window.location.href='/admin-panel')"
-                style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
-                border-radius:8px; border:1.5px solid #FCA5A5; background:#FEE2E2; color:#EF4444;
-                padding:7px 18px; cursor:pointer;">Sign out</button>
+                <button onclick="window.location.href='/logout'"
+                    style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+                    border-radius:8px; border:1.5px solid #FCA5A5; background:#FEE2E2; color:#EF4444;
+                    padding:7px 18px; cursor:pointer;">Sign out</button>
         </div>
         """,
         sizing_mode="stretch_width",

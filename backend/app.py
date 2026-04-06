@@ -1,23 +1,34 @@
 import os
 import panel as pn
-from flask import Flask
+from flask import Flask, redirect, make_response
 from flask_cors import CORS
 from tornado.wsgi import WSGIContainer
-from tornado.web import FallbackHandler
+from tornado.web import FallbackHandler, RequestHandler
 from flask_apscheduler import APScheduler
 
 from configs.routes.v1.render_home  import render_home_page
 from configs.routes.v1.render_admin import render_admin_page
-from configs.routes.v1.data_ingest  import data_ingest_bp          # ← new
+from configs.routes.v1.data_ingest  import data_ingest_bp
 
 from frontend.panel_app      import render_dashboard_page
 from frontend.admin          import render_admin_page as panel_admin_page
 from frontend.user_settings  import render_settings_page
-from auth import current_user, render_login_page
+from auth import current_user, render_login_page, _sessions, COOKIE_NAME
 
 
 def my_job():
     print("Running at 10:45 Romanian time!")
+
+class LogoutHandler(RequestHandler):
+    def get(self):
+        token = self.get_cookie(COOKIE_NAME)
+        if token:
+            _sessions.pop(token, None)         
+        self.clear_cookie(COOKIE_NAME, path="/") 
+        self.redirect("/")
+
+   
+    post = get
 
 
 # ── Flask app ─────────────────────────────────────────────────
@@ -38,7 +49,6 @@ def create_flask_app():
     scheduler.init_app(app)
     scheduler.start()
 
-    # ── Blueprints ────────────────────────────────────────────
     app.register_blueprint(render_home_page,  url_prefix="/")
     app.register_blueprint(render_admin_page, url_prefix="/admin")
     app.register_blueprint(data_ingest_bp,    url_prefix="/api/v1")
@@ -70,12 +80,13 @@ def run_server():
     tornado_app    = server._tornado
     wsgi_container = WSGIContainer(flask_app)
 
-    # Panel owns these prefixes; everything else falls back to Flask
     PANEL_PREFIXES = ["/dashboard", "/admin-panel", "/settings", "/static", "/_root_"]
     exclusion = "|".join(PANEL_PREFIXES)
 
     tornado_app.add_handlers(r".*", [
-        (rf"^(?!{exclusion}).*", FallbackHandler, dict(fallback=wsgi_container))
+        # /logout is intercepted by Tornado BEFORE Flask fallback
+        (r"^/logout$", LogoutHandler),
+        (rf"^(?!{exclusion}).*", FallbackHandler, dict(fallback=wsgi_container)),
     ])
 
     server.start()
