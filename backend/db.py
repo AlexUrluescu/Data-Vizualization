@@ -1,4 +1,5 @@
 import os
+import secrets
 import sqlite3
 import hashlib
 import pandas as pd
@@ -78,7 +79,6 @@ def init_db():
             )
         """)
 
-       
         conn.execute("""
             CREATE TABLE IF NOT EXISTS sensors (
                 id         TEXT PRIMARY KEY,
@@ -91,18 +91,28 @@ def init_db():
             )
         """)
 
-  
+        # api_keys now has owner_username to link each key to an app user.
+        # user_id / user_hash are the credentials sent in API request headers.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                label      TEXT NOT NULL,
-                user_id    TEXT NOT NULL,
-                user_hash  TEXT NOT NULL,
-                api_url    TEXT NOT NULL,
-                is_active  INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT    NOT NULL
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                label          TEXT NOT NULL,
+                owner_username TEXT,
+                user_id        TEXT NOT NULL,
+                user_hash      TEXT NOT NULL,
+                api_url        TEXT NOT NULL,
+                is_active      INTEGER NOT NULL DEFAULT 1,
+                created_at     TEXT    NOT NULL
             )
         """)
+
+        # ── Migrate existing api_keys tables that lack owner_username ─────────
+        existing_cols = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(api_keys)").fetchall()
+        }
+        if "owner_username" not in existing_cols:
+            conn.execute("ALTER TABLE api_keys ADD COLUMN owner_username TEXT")
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS app_configs (
@@ -113,6 +123,7 @@ def init_db():
             )
         """)
 
+    # Seed default admin
     with get_conn() as conn:
         row = conn.execute("SELECT COUNT(*) FROM users").fetchone()
         if row[0] == 0:
@@ -121,7 +132,7 @@ def init_db():
 
 
 # ══════════════════════════════════════════════════════════════
-# Original: sensor data helpers
+# Sensor data helpers
 # ══════════════════════════════════════════════════════════════
 
 def mark_range_fetched(device_id: str, start_dt: datetime, end_dt: datetime):
@@ -214,22 +225,67 @@ def save_to_db(df: pd.DataFrame, device_id: str, location: str):
 
 
 # ══════════════════════════════════════════════════════════════
-# New: Users
+# Users
 # ══════════════════════════════════════════════════════════════
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+def _generate_api_credentials() -> tuple[str, str]:
+    """
+    Returns (user_id, user_hash) — unique, URL-safe random strings.
+
+    user_id   : 12-char uppercase hex  e.g. "A3F9C2D10B4E"
+    user_hash : 48-char lowercase hex  e.g. "9f3a...c2b1"
+    """
+    user_id   = secrets.token_hex(6).upper()          # 12 hex chars
+    user_hash = secrets.token_hex(24)                  # 48 hex chars
+    return user_id, user_hash
+
+
 def _create_user_conn(conn, username: str, password: str, role: str = "viewer"):
-    """Internal — reuses an open connection (used by init_db seed)."""
+    """
+    Internal helper — reuses an open connection (used by init_db seed).
+    Also auto-generates and stores API credentials for the new user.
+    """
+    now = datetime.utcnow().isoformat()
     conn.execute(
         "INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?)",
-        (username, _hash_password(password), role, datetime.utcnow().isoformat()),
+        (username, _hash_password(password), role, now),
+    )
+    _create_api_key_for_user_conn(conn, username, now)
+
+
+def _create_api_key_for_user_conn(conn, username: str, now: str | None = None):
+    """
+    Internal helper — generates and inserts one api_key row for `username`.
+    Skips if the user already has a key (idempotent).
+    """
+    now = now or datetime.utcnow().isoformat()
+    existing = conn.execute(
+        "SELECT id FROM api_keys WHERE owner_username=?", (username,)
+    ).fetchone()
+    if existing:
+        return  # already has credentials
+
+    api_url = os.getenv("API_URL", "https://api.example.com/data")
+    user_id, user_hash = _generate_api_credentials()
+
+    conn.execute(
+        """
+        INSERT INTO api_keys (label, owner_username, user_id, user_hash, api_url, is_active, created_at)
+        VALUES (?, ?, ?, ?, ?, 1, ?)
+        """,
+        (username, username, user_id, user_hash, api_url, now),
     )
 
 
 def create_user(username: str, password: str, role: str = "viewer") -> dict:
+    """
+    Creates the user and automatically generates their API credentials.
+    Returns {"ok": True} or {"ok": False, "error": "..."}.
+    """
     try:
         with get_conn() as conn:
             _create_user_conn(conn, username, password, role)
@@ -246,6 +302,26 @@ def verify_user(username: str, password: str) -> dict | None:
             (username, _hash_password(password)),
         ).fetchone()
     return dict(row) if row else None
+
+
+def verify_password(username: str, password: str) -> bool:
+    """
+    Returns True if `password` matches the stored hash for `username`.
+    Used by the user_settings change-password form.
+    """
+    return verify_user(username, password) is not None
+
+
+def update_user_password(user_id: int, new_password: str):
+    """
+    Replaces the password hash for the given user_id.
+    Called after verify_password() confirms the old password is correct.
+    """
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash=? WHERE id=?",
+            (_hash_password(new_password), user_id),
+        )
 
 
 def list_users() -> list[dict]:
@@ -267,7 +343,7 @@ def update_user_role(user_id: int, role: str):
 
 
 # ══════════════════════════════════════════════════════════════
-# New: Sensors metadata
+# Sensors metadata
 # ══════════════════════════════════════════════════════════════
 
 def upsert_sensor(sensor_id: str, name: str, lat: float, lon: float,
@@ -289,21 +365,40 @@ def list_sensors() -> list[dict]:
 
 
 def delete_sensor(sensor_id: str):
-    """Soft delete — marks sensor as inactive."""
     with get_conn() as conn:
         conn.execute("UPDATE sensors SET is_active=0 WHERE id=?", (sensor_id,))
 
 
 # ══════════════════════════════════════════════════════════════
-# New: API Keys
+# API Keys
 # ══════════════════════════════════════════════════════════════
 
-def add_api_key(label: str, user_id: str, user_hash: str, api_url: str):
+def add_api_key(label: str, user_id: str, user_hash: str, api_url: str,
+                owner_username: str | None = None):
+    """
+    Manually add an API key (admin use).
+    `owner_username` links the key to a specific app user so it appears
+    on their /settings page.  Leave None for a shared / unowned key.
+    """
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO api_keys (label, user_id, user_hash, api_url, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (label, user_id, user_hash, api_url, datetime.utcnow().isoformat()))
+            INSERT INTO api_keys (label, owner_username, user_id, user_hash, api_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (label, owner_username, user_id, user_hash, api_url, datetime.utcnow().isoformat()))
+
+
+def get_user_api_keys(username: str) -> list[dict]:
+    """
+    Returns all active API keys that belong to `username`.
+    This is what the /settings page calls — it gets exactly
+    the credentials generated for that user (or manually assigned to them).
+    """
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM api_keys WHERE owner_username=? AND is_active=1 ORDER BY id",
+            (username,),
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def list_api_keys() -> list[dict]:
@@ -323,7 +418,7 @@ def delete_api_key(key_id: int):
 
 
 # ══════════════════════════════════════════════════════════════
-# New: App Configs
+# App Configs
 # ══════════════════════════════════════════════════════════════
 
 def set_config(key: str, value: str, description: str = ""):

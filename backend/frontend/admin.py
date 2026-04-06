@@ -1,8 +1,3 @@
-"""
-admin.py — Admin panel with reactive auth.
-All container.objects swaps wrapped in pn.io.unlocked().
-"""
-
 import panel as pn
 import pandas as pd
 from auth import current_user, logout, render_login_page
@@ -374,7 +369,6 @@ def _users_tab():
     )
 
 
-# ── Admin panel builder ───────────────────────────────────────
 def _build_admin_panel(container: pn.Column, user: dict):
     back_btn = pn.widgets.Button(name="← Dashboard", button_type="light",
                                  stylesheets=[_btn("#FFFFFF", "#4B51A0")])

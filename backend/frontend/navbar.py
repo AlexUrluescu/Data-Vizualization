@@ -1,10 +1,3 @@
-"""
-navbar.py — Shared top navigation bar.
-Usage:
-    from navbar import render_navbar
-    layout = pn.Column(render_navbar(active="dashboard"), ...)
-"""
-
 import panel as pn
 from auth import current_user, logout
 
@@ -13,13 +6,6 @@ FONT_IMPORT = (
     "&family=DM+Mono&display=swap');"
 )
 
-NAV_CSS = """
-.nav-link-active button {
-    background: #EEF0FF !important;
-    color: #4B51A0 !important;
-    border-color: #C7D2FE !important;
-}
-"""
 
 def _nav_btn(label: str, href: str, active: bool = False):
     btn = pn.widgets.Button(
@@ -53,14 +39,13 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
     """
     Parameters
     ----------
-    active : "dashboard" | "admin"
+    active : "dashboard" | "admin" | "settings"
         Which nav item to highlight.
     """
     pn.config.raw_css.append(FONT_IMPORT)
 
     user = current_user()
 
-    # ── Logo / brand ─────────────────────────────────────────
     brand = pn.pane.Markdown(
         title,
         styles={
@@ -72,14 +57,24 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
         },
     )
 
-    # ── Nav links ─────────────────────────────────────────────
+    nav_items = [
+        _nav_btn("📊 Dashboard", "/", active=(active == "dashboard")),
+    ]
+
+    if user:
+        nav_items.append(
+            _nav_btn("⚙ Settings", "/settings", active=(active == "settings"))
+        )
+        if user.get("role") == "admin":
+            nav_items.append(
+                _nav_btn("🛠 Admin", "/admin-panel", active=(active == "admin"))
+            )
+
     nav_links = pn.Row(
-        _nav_btn("📊 Dashboard", "/",       active=(active == "dashboard")),
-        _nav_btn("🛠 Admin",     "/admin-panel",  active=(active == "admin")),
+        *nav_items,
         styles={"gap": "4px", "align-items": "center"},
     )
 
-    # ── Right side: user info + logout ────────────────────────
     if user:
         role_badge_color = "#6366F1" if user.get("role") == "admin" else "#7B82B4"
         user_info = pn.pane.Markdown(
@@ -117,8 +112,7 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
 
         def on_logout(e):
             logout()
-            import panel as pn
-            pn.state.location.reload = True  # forces full page reload to login
+            pn.state.location.reload = True
         logout_btn.on_click(on_logout)
 
         right_side = pn.Row(
@@ -127,10 +121,9 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
             styles={"gap": "12px", "align-items": "center"},
         )
     else:
-        # Not logged in — show a login link
-        right_side = _nav_btn("🔑 Login", "/admin-panel")
+        right_side = _nav_btn("🔑 Login", "/settings")
 
-    # ── Assemble bar ──────────────────────────────────────────
+
     navbar = pn.Row(
         brand,
         pn.Spacer(sizing_mode="stretch_width"),
@@ -147,7 +140,7 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
             "position": "sticky",
             "top": "0",
             "z-index": "100",
-            "border-radius": "15px"
+            "border-radius": "15px",
         },
     )
 
