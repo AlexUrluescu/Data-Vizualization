@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python must be installed on your system (download from python.org if needed)
+- Python must be installed on your system (3.14)
 - Command Prompt or PowerShell access
 
 ## Step 1: Create a Virtual Environment
@@ -10,7 +10,7 @@
 Open Command Prompt or PowerShell and navigate to your project directory:
 
 ```cmd
-cd path\to\your\project
+cd backend
 ```
 
 Create a virtual environment named `venv`:
@@ -52,7 +52,7 @@ With the virtual environment activated, install packages using pip:
 **Install a single package:**
 
 ```cmd
-pip install package-name
+pip install package
 ```
 
 **Install multiple packages:**
@@ -61,7 +61,7 @@ pip install package-name
 pip install package1 package2 package3
 ```
 
-**Install from a requirements file:**
+**Install from a requirements file: (use this)**
 
 ```cmd
 pip install -r requirements.txt
