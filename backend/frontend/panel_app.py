@@ -14,12 +14,13 @@ import altair as alt
 from .util_functions import getParameter, get_api_intervals, generate_popup_content
 from insights import generate_period_insights
 from forecast import train_and_forecast
+from chat import ChatAgent
 from .navbar import render_navbar
 from .css import (
     date_picker_style, my_custom_style, checkbox_style_square,
     card_style, chart_container_style, map_container_style,
     FONT_IMPORT, global_style, section_label, divider_style,
-    forecast_card_style,
+    forecast_card_style, chat_card_style, chat_bubble_css,
 )
 
 alt.data_transformers.disable_max_rows()
@@ -887,6 +888,192 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
+    # ── AI Chat section ───────────────────────────────────────
+    pn.config.raw_css.append(chat_bubble_css)
+
+    chat_agent = ChatAgent()
+
+    chat_input = pn.widgets.TextInput(
+        name='',
+        placeholder='Pune o întrebare despre datele din senzori...',
+        sizing_mode='stretch_width',
+        stylesheets=["""
+        :host { font-family: 'DM Sans', sans-serif !important; }
+        .bk-input {
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 14px !important;
+            color: #2D2F3E !important;
+            border: 1.5px solid #E0E4F5 !important;
+            border-radius: 12px !important;
+            padding: 12px 16px !important;
+            background: #F7F8FC !important;
+            transition: border-color 0.2s !important;
+        }
+        .bk-input:focus {
+            border-color: #34D399 !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15) !important;
+        }
+        """],
+    )
+
+    chat_send_btn = pn.widgets.Button(
+        name='Trimite',
+        button_type='primary',
+        width=120,
+        stylesheets=["""
+        :host button {
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            border-radius: 12px !important;
+            background: linear-gradient(135deg, #34D399 0%, #059669 100%) !important;
+            color: #fff !important;
+            border: none !important;
+            padding: 12px 20px !important;
+            cursor: pointer !important;
+            transition: opacity 0.18s !important;
+            box-shadow: 0 4px 14px rgba(52, 211, 153, 0.3) !important;
+        }
+        :host button:hover { opacity: 0.88 !important; }
+        """],
+    )
+
+    chat_reset_btn = pn.widgets.Button(
+        name='🗑',
+        button_type='light',
+        width=44,
+        stylesheets=["""
+        :host button {
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 16px !important;
+            border-radius: 12px !important;
+            background: #F7F8FC !important;
+            border: 1.5px solid #E0E4F5 !important;
+            color: #7B82B4 !important;
+            padding: 10px !important;
+            cursor: pointer !important;
+            transition: all 0.18s !important;
+        }
+        :host button:hover {
+            border-color: #FCA5A5 !important;
+            background: #FEF2F2 !important;
+            color: #EF4444 !important;
+        }
+        """],
+    )
+
+    welcome_html = """
+    <div class="chat-history" id="chat-history">
+        <div class="chat-bubble assistant">
+            👋 Salut! Sunt asistentul tău AI pentru calitatea aerului din Sibiu.<br><br>
+            Poți să mă întrebi orice despre datele din senzori, de exemplu:<br>
+            • <i>"Care e temperatura medie în Centru?"</i><br>
+            • <i>"Când a fost cel mai poluat aer?"</i><br>
+            • <i>"Compară umiditatea din Gusterița cu Caposu"</i>
+        </div>
+    </div>
+    """
+
+    chat_history_pane = pn.pane.HTML(
+        welcome_html,
+        sizing_mode='stretch_width',
+    )
+
+    def _render_chat_history(history):
+        """Render conversation history as HTML chat bubbles."""
+        if not history:
+            return welcome_html
+
+        html = '<div class="chat-history" id="chat-history">'
+        for msg in history:
+            role = msg["role"]
+            content = msg["content"]
+            # Basic markdown-like formatting
+            content = content.replace("\n", "<br>")
+            # Bold: **text** → <b>text</b>
+            import re
+            content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', content)
+            # Code: `text` → <code>text</code>
+            content = re.sub(r'`([^`]+)`', r'<code style="background:#E0E4F5;padding:2px 6px;border-radius:4px;font-size:12px;">\1</code>', content)
+
+            css_class = "user" if role == "user" else "assistant"
+            html += f'<div class="chat-bubble {css_class}">{content}</div>'
+        html += '</div>'
+
+        # Auto-scroll to bottom
+        html += """
+        <script>
+            setTimeout(function() {
+                var el = document.getElementById('chat-history');
+                if (el) el.scrollTop = el.scrollHeight;
+            }, 100);
+        </script>
+        """
+        return html
+
+    def _on_chat_send(event):
+        question = chat_input.value.strip()
+        if not question:
+            return
+
+        # Show user message immediately
+        chat_agent.history.append({"role": "user", "content": question})
+        # Remove the appended user message since ask() will add it again
+        chat_agent.history.pop()
+
+        chat_input.value = ''
+
+        # Show loading state
+        loading_html = _render_chat_history(chat_agent.get_history() + [{"role": "user", "content": question}])
+        loading_html = loading_html.replace(
+            '</div>\n        <script>',
+            '<div class="chat-loading"><span></span><span></span><span></span></div></div>\n        <script>'
+        )
+        chat_history_pane.object = loading_html
+
+        # Get answer from AI
+        answer = chat_agent.ask(question)
+
+        # Update chat
+        chat_history_pane.object = _render_chat_history(chat_agent.get_history())
+
+    def _on_chat_reset(event):
+        chat_agent.reset()
+        chat_history_pane.object = welcome_html
+
+    # Handle Enter key submit
+    chat_input.param.watch(lambda event: _on_chat_send(event) if event.new and event.new.endswith('\n') else None, 'value')
+    chat_send_btn.on_click(_on_chat_send)
+    chat_reset_btn.on_click(_on_chat_reset)
+
+    chat_card = pn.Column(
+        pn.Row(
+            pn.pane.Markdown(
+                "## 💬 Asistent AI",
+                styles={"font-family": "'DM Sans', sans-serif", "color": "#2D2F3E", "margin-bottom": "0px"},
+            ),
+            pn.Spacer(),
+            chat_reset_btn,
+            sizing_mode='stretch_width',
+            styles={'align-items': 'center'},
+        ),
+        pn.pane.Markdown(
+            "Pune întrebări în limbaj natural despre datele din senzori. AI-ul generează interogări SQL automat.",
+            styles={"color": "#7B82B4", "font-size": "13px", "margin-bottom": "12px"},
+        ),
+        pn.layout.Divider(),
+        chat_history_pane,
+        pn.Row(
+            chat_input,
+            chat_send_btn,
+            sizing_mode='stretch_width',
+            styles={'gap': '10px', 'align-items': 'flex-end', 'margin-top': '12px'},
+        ),
+        styles=chat_card_style,
+        sizing_mode='stretch_width',
+    )
+
     # ── Page header ───────────────────────────────────────────
     header = pn.pane.Markdown(
         # """
@@ -911,8 +1098,9 @@ def render_dashboard_page():
         header,
         map_card,
         historical_card,
-        report_card,
+        # report_card,
         forecast_card,
+        chat_card,
         sizing_mode='stretch_width',
         styles={
             "max-width": "1280px",
