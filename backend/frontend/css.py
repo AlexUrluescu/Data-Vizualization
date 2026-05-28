@@ -265,3 +265,12 @@ chart_container_style = {
 
 def section_label(text: str, emoji: str = "") -> str:
     return f"### {emoji} {text}" if emoji else f"### {text}"
+
+forecast_card_style = {
+    "background": "#FFFFFF",
+    "border-radius": "16px",
+    "box-shadow": "0 2px 16px rgba(100, 108, 180, 0.08)",
+    "padding": "20px 24px",
+    "margin-bottom": "16px",
+    "border-top": "3px solid #A78BFA",
+}

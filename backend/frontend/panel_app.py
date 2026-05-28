@@ -13,11 +13,13 @@ from datetime import datetime, timezone
 import altair as alt
 from .util_functions import getParameter, get_api_intervals, generate_popup_content
 from insights import generate_period_insights
+from forecast import train_and_forecast
 from .navbar import render_navbar
 from .css import (
     date_picker_style, my_custom_style, checkbox_style_square,
     card_style, chart_container_style, map_container_style,
-    FONT_IMPORT, global_style, section_label, divider_style
+    FONT_IMPORT, global_style, section_label, divider_style,
+    forecast_card_style,
 )
 
 alt.data_transformers.disable_max_rows()
@@ -627,6 +629,264 @@ def render_dashboard_page():
         styles=card_style,
     )
 
+    # ── Forecast (XGBoost) section ────────────────────────────
+    forecast_hours_slider = pn.widgets.IntSlider(
+        name='Ore de predicție',
+        start=6, end=72, step=6, value=24,
+        bar_color='#A78BFA',
+        stylesheets=["""
+        :host { font-family: 'DM Sans', sans-serif !important; }
+        label { font-size: 12px !important; color: #5A5F94 !important;
+                font-weight: 600 !important; letter-spacing: 0.04em !important; }
+        """],
+    )
+
+    forecast_btn = pn.widgets.Button(
+        name='Generează Forecast',
+        button_type='primary',
+        width=200,
+        stylesheets=["""
+        :host button {
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            border-radius: 10px !important;
+            background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%) !important;
+            color: #fff !important;
+            border: none !important;
+            padding: 10px 20px !important;
+            cursor: pointer !important;
+            transition: opacity 0.18s !important;
+            box-shadow: 0 4px 14px rgba(167, 139, 250, 0.35) !important;
+        }
+        :host button:hover { opacity: 0.88 !important; }
+        """],
+    )
+
+    forecast_container = pn.Column(
+        pn.pane.HTML(
+            """
+            <div style="text-align:center; padding:40px 0; color:#7B82B4;
+                        font-family:'DM Sans',sans-serif; font-size:14px;">
+                <div style="font-size:36px; margin-bottom:10px;">🔮</div>
+                Selectează date istorice și apasă <b>Generează Forecast</b><br>
+                pentru a vedea predicțiile XGBoost.
+            </div>
+            """,
+            sizing_mode='stretch_width',
+        ),
+        sizing_mode='stretch_width',
+        min_height=200,
+    )
+
+    def _build_forecast_chart(hist_df, forecast_df, param, param_label, unit):
+        """Build a layered Altair chart: historical + forecast + confidence band."""
+        # Last 48h of historical data for context
+        hist = hist_df[["timestamp", param]].copy()
+        hist["timestamp"] = pd.to_datetime(hist["timestamp"])
+        cutoff = hist["timestamp"].max() - pd.Timedelta(hours=48)
+        hist = hist[hist["timestamp"] >= cutoff].copy()
+        hist = hist.rename(columns={param: "value"})
+        hist["type"] = "Istoric"
+
+        fc = forecast_df.rename(columns={"forecast": "value"}).copy()
+        fc["type"] = "Predicție"
+
+        combined = pd.concat([hist, fc], ignore_index=True)
+
+        # Confidence band (±10%)
+        band_df = fc.copy()
+        band_df["upper"] = band_df["value"] * 1.10
+        band_df["lower"] = band_df["value"] * 0.90
+
+        axis_cfg = dict(
+            labelFont='DM Sans', titleFont='DM Sans',
+            labelColor='#7B82B4', titleColor='#5A5F94',
+            gridColor='#F0F2FA', domainColor='#E0E4F5',
+        )
+
+        # Historical line
+        hist_line = alt.Chart(combined[combined["type"] == "Istoric"]).mark_line(
+            strokeWidth=2.5,
+            point=alt.OverlayMarkDef(filled=True, size=40),
+        ).encode(
+            x=alt.X('timestamp:T', title='Time', axis=alt.Axis(format='%d %b %H:%M', **axis_cfg)),
+            y=alt.Y('value:Q', title=f'{param_label} ({unit})', axis=alt.Axis(**axis_cfg)),
+            color=alt.value('#7C9EFF'),
+            tooltip=[
+                alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'),
+                alt.Tooltip('value:Q', format='.1f', title=param_label),
+            ],
+        )
+
+        # Forecast line (dashed)
+        fc_line = alt.Chart(combined[combined["type"] == "Predicție"]).mark_line(
+            strokeDash=[6, 4], strokeWidth=2.5,
+            point=alt.OverlayMarkDef(filled=True, size=40),
+        ).encode(
+            x='timestamp:T',
+            y='value:Q',
+            color=alt.value('#F59E0B'),
+            tooltip=[
+                alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'),
+                alt.Tooltip('value:Q', format='.1f', title='Predicție'),
+            ],
+        )
+
+        # Confidence band
+        band = alt.Chart(band_df).mark_area(opacity=0.15).encode(
+            x='timestamp:T',
+            y='lower:Q',
+            y2='upper:Q',
+            color=alt.value('#F59E0B'),
+        )
+
+        # Vertical line at forecast start
+        fc_start_ts = fc["timestamp"].min()
+        rule_df = pd.DataFrame({"x": [fc_start_ts]})
+        rule = alt.Chart(rule_df).mark_rule(
+            strokeDash=[4, 4], strokeWidth=1.5, color='#A78BFA'
+        ).encode(x='x:T')
+
+        # Legend entries (manual)
+        legend_data = pd.DataFrame({
+            "label": ["Istoric", "Predicție XGBoost"],
+            "color": ["#7C9EFF", "#F59E0B"],
+        })
+        legend = alt.Chart(legend_data).mark_point(size=0).encode(
+            color=alt.Color('label:N',
+                scale=alt.Scale(domain=["Istoric", "Predicție XGBoost"],
+                                range=["#7C9EFF", "#F59E0B"]),
+                legend=alt.Legend(title="Tip", titleFont='DM Sans', labelFont='DM Sans',
+                                  titleColor='#5A5F94', labelColor='#2D2F3E')),
+        )
+
+        chart = (
+            alt.layer(hist_line, band, fc_line, rule, legend)
+            .properties(
+                title=alt.TitleParams(
+                    f'🔮 Forecast {param_label} — următoarele {len(fc)} ore',
+                    font='DM Sans', fontSize=15, fontWeight=600,
+                    color='#2D2F3E', anchor='start', offset=8,
+                ),
+                height=400,
+                width='container',
+                background='#FFFFFF',
+            )
+            .configure_view(strokeWidth=0)
+            .interactive()
+        )
+        return chart
+
+    def on_forecast_click(event):
+        global df_api_data
+        forecast_container.loading = True
+
+        try:
+            if df_api_data is None or df_api_data.empty:
+                forecast_container.objects = [
+                    pn.pane.HTML(
+                        '<div style="text-align:center;padding:30px;color:#EF4444;'
+                        'font-family:DM Sans,sans-serif;">'
+                        '⚠️ Nu există date încărcate. Selectează locații și un interval de date mai întâi.</div>',
+                        sizing_mode='stretch_width',
+                    )
+                ]
+                return
+
+            param_sel = parameter_selector.value
+            param_col = "temperature"
+            param_label = "Temperatură"
+            unit = "°C"
+            if param_sel == "Humidity":
+                param_col = "humidity"
+                param_label = "Umiditate"
+                unit = "%"
+            elif param_sel == "Carbon Monoxide":
+                param_col = "pm25"
+                param_label = "PM2.5"
+                unit = "µg/m³"
+
+            horizon = forecast_hours_slider.value
+            fc_df = train_and_forecast(df_api_data, param_col, horizon)
+
+            if fc_df.empty:
+                forecast_container.objects = [
+                    pn.pane.HTML(
+                        '<div style="text-align:center;padding:30px;color:#F59E0B;'
+                        'font-family:DM Sans,sans-serif;">'
+                        '⚠️ Date insuficiente pentru forecast. Te rugăm să selectezi un interval de <b>minim 2-3 zile</b> de istoric din selectorul de date.</div>',
+                        sizing_mode='stretch_width',
+                    )
+                ]
+                return
+
+            chart = _build_forecast_chart(df_api_data, fc_df, param_col, param_label, unit)
+
+            # Stats summary bar
+            fc_mean = fc_df["forecast"].mean()
+            fc_min  = fc_df["forecast"].min()
+            fc_max  = fc_df["forecast"].max()
+            stats_html = f"""
+            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-family:'DM Sans',sans-serif;">
+                <div style="flex:1; min-width:140px; background:#F5F3FF; border-radius:12px;
+                            padding:14px 18px; border-left:4px solid #A78BFA;">
+                    <div style="font-size:11px; color:#7B82B4; text-transform:uppercase; letter-spacing:0.05em;">Media Predicție</div>
+                    <div style="font-size:20px; font-weight:700; color:#7C3AED;">{fc_mean:.1f} {unit}</div>
+                </div>
+                <div style="flex:1; min-width:140px; background:#EFF6FF; border-radius:12px;
+                            padding:14px 18px; border-left:4px solid #7C9EFF;">
+                    <div style="font-size:11px; color:#7B82B4; text-transform:uppercase; letter-spacing:0.05em;">Minim Predicție</div>
+                    <div style="font-size:20px; font-weight:700; color:#3B82F6;">{fc_min:.1f} {unit}</div>
+                </div>
+                <div style="flex:1; min-width:140px; background:#FFF7ED; border-radius:12px;
+                            padding:14px 18px; border-left:4px solid #F59E0B;">
+                    <div style="font-size:11px; color:#7B82B4; text-transform:uppercase; letter-spacing:0.05em;">Maxim Predicție</div>
+                    <div style="font-size:20px; font-weight:700; color:#D97706;">{fc_max:.1f} {unit}</div>
+                </div>
+            </div>
+            """
+
+            forecast_container.objects = [
+                pn.pane.Vega(chart, sizing_mode='stretch_width'),
+                pn.pane.HTML(stats_html, sizing_mode='stretch_width'),
+            ]
+
+        except Exception as e:
+            forecast_container.objects = [
+                pn.pane.HTML(
+                    f'<div style="text-align:center;padding:30px;color:#EF4444;'
+                    f'font-family:DM Sans,sans-serif;">'
+                    f'❌ Eroare la generarea forecast-ului: {e}</div>',
+                    sizing_mode='stretch_width',
+                )
+            ]
+        finally:
+            forecast_container.loading = False
+
+    forecast_btn.on_click(on_forecast_click)
+
+    forecast_card = pn.Column(
+        pn.pane.Markdown(
+            "## 🔮 Forecast (XGBoost)",
+            styles={"font-family": "'DM Sans', sans-serif", "color": "#2D2F3E", "margin-bottom": "4px"},
+        ),
+        pn.pane.Markdown(
+            "Predicție bazată pe datele istorice folosind XGBoost. Selectează orizontul de timp și apasă butonul.",
+            styles={"color": "#7B82B4", "font-size": "13px", "margin-bottom": "16px"},
+        ),
+        pn.Row(
+            forecast_hours_slider,
+            forecast_btn,
+            sizing_mode='stretch_width',
+            styles={'gap': '20px', 'align-items': 'flex-end', 'flex-wrap': 'wrap'},
+        ),
+        pn.layout.Divider(),
+        forecast_container,
+        styles=forecast_card_style,
+        sizing_mode='stretch_width',
+    )
+
     # ── Page header ───────────────────────────────────────────
     header = pn.pane.Markdown(
         # """
@@ -652,6 +912,7 @@ def render_dashboard_page():
         map_card,
         historical_card,
         report_card,
+        forecast_card,
         sizing_mode='stretch_width',
         styles={
             "max-width": "1280px",
