@@ -2,7 +2,7 @@ import panel as pn
 import pandas as pd
 from auth import current_user, logout
 from db import (
-    list_sensors, upsert_sensor, delete_sensor,
+    list_sensors, upsert_sensor, delete_sensor, activate_sensor,
     list_api_keys, add_api_key, toggle_api_key, delete_api_key,
     list_configs, set_config,
     list_users, create_user, delete_user, update_user_role,
@@ -132,6 +132,18 @@ def _sensors_tab():
         refresh()
     del_btn.on_click(on_del)
 
+    a_id = pn.widgets.TextInput(placeholder="Sensor ID", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    act_btn = pn.widgets.Button(name="✅ Activate", stylesheets=[_btn("#22C55E")])
+
+    def on_act(e):
+        sid = a_id.value.strip().upper()
+        if not sid: return
+        activate_sensor(sid)
+        _ok(n, f"Sensor {sid} activated.")
+        a_id.value = ""
+        refresh()
+    act_btn.on_click(on_act)
+
     return pn.Column(
         pn.pane.Markdown("## 📡 Sensors", styles=SECTION_TITLE),
         pn.layout.Divider(),
@@ -153,8 +165,9 @@ def _sensors_tab():
             styles=CARD, 
         ),
         pn.Column(
-            pn.pane.Markdown("### Deactivate", styles={"color":"#4B51A0"}),
+            pn.pane.Markdown("### Deactivate / Activate", styles={"color":"#4B51A0"}),
             pn.Row(_lbl("Sensor ID"), d_id, del_btn, styles={"gap":"14px","align-items":"flex-end"}),
+            pn.Row(_lbl("Sensor ID"), a_id, act_btn, styles={"gap":"14px","align-items":"flex-end"}),
             styles=CARD,
         ),
         pn.Column(pn.pane.Markdown("### All Sensors", styles={"color":"#4B51A0"}), th, styles=CARD),
@@ -372,7 +385,7 @@ def _users_tab():
 def _build_admin_panel(container: pn.Column, user: dict):
     back_btn = pn.widgets.Button(name="← Dashboard", button_type="light",
                                  stylesheets=[_btn("#FFFFFF", "#4B51A0")])
-    back_btn.js_on_click(code="window.location.href='/'")
+    back_btn.js_on_click(code="window.location.href='/dashboard'")
 
     logout_btn = pn.widgets.Button(name="Sign out", button_type="light",
                                    stylesheets=[_btn("#FEE2E2", "#EF4444")])
@@ -395,7 +408,7 @@ def _build_admin_panel(container: pn.Column, user: dict):
             <span style="color:#7B82B4; font-size:13px; white-space:nowrap;">
                 👤 <b>{user['username']}</b> · <code style="font-family:'DM Mono',monospace">{user['role']}</code>
             </span>
-            <a href="/" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+            <a href="/dashboard" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
                 border-radius:8px; border:1.5px solid #4B51A0; background:#fff; color:#4B51A0;
                 padding:7px 18px; cursor:pointer; text-decoration:none;">← Dashboard</a>
                 <button onclick="window.location.href='/logout'"

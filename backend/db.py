@@ -369,6 +369,11 @@ def delete_sensor(sensor_id: str):
         conn.execute("UPDATE sensors SET is_active=0 WHERE id=?", (sensor_id,))
 
 
+def activate_sensor(sensor_id: str):
+    with get_conn() as conn:
+        conn.execute("UPDATE sensors SET is_active=1 WHERE id=?", (sensor_id,))
+
+
 # ══════════════════════════════════════════════════════════════
 # API Keys
 # ══════════════════════════════════════════════════════════════

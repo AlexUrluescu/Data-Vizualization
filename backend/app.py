@@ -127,7 +127,7 @@ class LoginHandler(RequestHandler):
     def get(self):
         token = self.get_cookie(COOKIE_NAME)
         if token and token in _sessions:
-            self.redirect("/")
+            self.redirect("/dashboard")
             return
         self.finish(LOGIN_HTML.replace("{error_block}", ""))
 
@@ -154,7 +154,7 @@ class LogoutHandler(RequestHandler):
         if token:
             _sessions.pop(token, None)
         self.clear_cookie(COOKIE_NAME, path="/")
-        self.redirect("/")
+        self.redirect("/dashboard")
 
     post = get
 

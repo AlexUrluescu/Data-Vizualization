@@ -1142,7 +1142,7 @@ def render_admin_page():
         }
         """],
     )
-    admin_btn.js_on_click(code="window.location.href = '/'")
+    admin_btn.js_on_click(code="window.location.href = '/dashboard'")
 
     @pn.depends(upload_widget.param.value)
     def process_excel(file_content):
