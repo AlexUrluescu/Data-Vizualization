@@ -20,7 +20,6 @@ def my_job():
     print("Running at 10:45 Romanian time!")
 
 
-# ── Login page HTML ───────────────────────────────────────────
 LOGIN_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,7 +121,6 @@ LOGIN_HTML = """<!DOCTYPE html>
 </html>"""
 
 
-# ── Tornado auth handlers ─────────────────────────────────────
 class LoginHandler(RequestHandler):
     def get(self):
         token = self.get_cookie(COOKIE_NAME)
@@ -159,7 +157,6 @@ class LogoutHandler(RequestHandler):
     post = get
 
 
-# ── Flask app ─────────────────────────────────────────────────
 def create_flask_app():
     app = Flask(__name__)
 
@@ -187,7 +184,7 @@ def create_flask_app():
 flask_app = create_flask_app()
 
 
-# ── Panel + Tornado server ────────────────────────────────────
+
 def run_server():
     port = int(os.environ.get("PORT", 7860))
     print(f"🚀 Starting Server on port {port}...")

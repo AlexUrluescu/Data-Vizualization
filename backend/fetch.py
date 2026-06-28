@@ -44,14 +44,11 @@ def fetch_location_data(
         else:
             print(f"   ✅ No gap at END (within {gap_end:.0f}s tolerance)")
 
-    # ---------------------------------------------------------
-    # 2. NEW CHUNKING LOGIC: Slice large ranges into 1-day blocks
-    # ---------------------------------------------------------
+
     chunked_ranges = []
     for (f_dt, t_dt) in initial_fetch_ranges:
         curr_start = f_dt
         while curr_start < t_dt:
-            # Set chunk end to 1 day later, or the absolute end date, whichever is sooner
             curr_end = min(curr_start + timedelta(days=1), t_dt)
             chunked_ranges.append((curr_start, curr_end))
             curr_start = curr_end
@@ -60,7 +57,6 @@ def fetch_location_data(
     if not chunked_ranges:
         print(f"   🚀 Source        : DB ONLY (no API call needed)")
     
-    # 3. Loop through the smaller, manageable chunks
     for (from_dt, to_dt) in chunked_ranges:
         if is_range_fetched(device_id, from_dt, to_dt):
                 print(f"   ⏭️  Skip API (deja interogat): {from_dt} → {to_dt}")
@@ -78,7 +74,6 @@ def fetch_location_data(
         else:
             print(f"   ⚠️  API returned  : 0 rows (empty or error)")
 
-    # 4. Pull everything together from the DB cache
     db_df = get_cached_range(device_id, start_dt, end_dt)
     if not db_df.empty:
         print(f"   📦 DB returned   : {len(db_df)} rows")
@@ -91,7 +86,6 @@ def fetch_location_data(
         print(f"{'='*60}\n")
         return pd.DataFrame()
 
-    # Combine and deduplicate
     result = (
         pd.concat(frames)
         .drop_duplicates(subset=["device_id", "timestamp"])
@@ -121,7 +115,7 @@ def _fetch_from_api(
         api_url  = f"{API_URL}/{device_id}/all/{start_sec}/{stop_sec}"
 
         print(f"      → GET {api_url}")
-        response = requests.get(api_url, headers=headers, timeout=10) # increased timeout slightly for safety
+        response = requests.get(api_url, headers=headers, timeout=10) 
         print(f"      ← HTTP {response.status_code}")
 
         if response.status_code != 200:

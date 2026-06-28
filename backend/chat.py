@@ -16,7 +16,7 @@ from db import DB_PATH, get_conn, list_sensors
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-QUERY_TIMEOUT = 5  # seconds
+QUERY_TIMEOUT = 5 
 MAX_RESULT_ROWS = 100
 
 
@@ -85,7 +85,7 @@ class ChatAgent:
             system_instruction=self.system_prompt,
         )
         self.chat = self.model.start_chat(history=[])
-        self.history = []  # [{role, content}, ...]
+        self.history = [] 
 
     def _send_with_retry(self, message: str, max_retries: int = 3):
         """Send message to Gemini with retry on rate limit (429) errors."""
@@ -94,7 +94,7 @@ class ChatAgent:
                 return self.chat.send_message(message)
             except Exception as e:
                 if "429" in str(e) and attempt < max_retries - 1:
-                    wait = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                    wait = 2 ** (attempt + 1) 
                     print(f"[chat] Rate limited, retrying in {wait}s...")
                     time.sleep(wait)
                 else:
@@ -116,7 +116,7 @@ class ChatAgent:
         for keyword in dangerous:
             if normalized.startswith(keyword):
                 return False
-        # Also check for dangerous statements after semicolons (multi-statement injection)
+        
         if ";" in sql:
             statements = [s.strip() for s in sql.split(";") if s.strip()]
             for stmt in statements:
@@ -151,22 +151,22 @@ class ChatAgent:
         self.history.append({"role": "user", "content": question})
 
         try:
-            # Step 1: Ask LLM to generate SQL
+            
             response = self._send_with_retry(question)
             llm_text = response.text
 
             sql = self._extract_sql(llm_text)
 
             if sql is None:
-                # LLM responded without SQL (maybe a general question)
+                
                 self.history.append({"role": "assistant", "content": llm_text})
                 return llm_text
 
-            # Step 2: Execute SQL
+            
             result = self._execute_sql(sql)
 
             if "error" in result:
-                # Retry: tell LLM about the error
+                
                 retry_msg = (
                     f"Interogarea SQL a returnat o eroare: {result['error']}\n"
                     f"SQL-ul tău a fost: {sql}\n"
@@ -187,11 +187,11 @@ class ChatAgent:
                     self.history.append({"role": "assistant", "content": retry_text})
                     return retry_text
 
-            # Step 3: Send results back to LLM for natural language answer
+            
             result_summary = f"Rezultatul interogării SQL:\n"
             if result["data"]:
                 result_summary += f"Coloane: {result['columns']}\n"
-                # Limit data sent to LLM
+                
                 display_data = result["data"][:20]
                 for row in display_data:
                     result_summary += f"  {row}\n"

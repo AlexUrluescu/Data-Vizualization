@@ -128,7 +128,7 @@ label {
 }
 """
 
-# ── RadioBoxGroup / CheckBoxGroup (parameter & location selectors) ──
+
 my_custom_style = """
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
 

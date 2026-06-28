@@ -46,7 +46,7 @@ USER_HASH = os.getenv("USER_HASH")
 metadata_senzori = [
     {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]}
     for s in list_sensors()
-    if s["is_active"]  # only active sensors
+    if s["is_active"]
 ]
 
 current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
@@ -54,7 +54,6 @@ current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "car
 df_api_data = pd.DataFrame()
 
 
-# ── Altair chart ──────────────────────────────────────────────
 def get_temperature_plot(parameter_selector):
     if df_api_data.empty:
         return pn.pane.Markdown(
@@ -112,7 +111,6 @@ def get_temperature_plot(parameter_selector):
         tooltip='label'
     )
 
-    # Pastel color palette for multi-location lines
     pastel_palette = [
         "#7C9EFF", "#F9A8D4", "#6EE7B7", "#FCD34D",
         "#C4B5FD", "#FCA5A5", "#67E8F9", "#A3E635",
@@ -215,13 +213,12 @@ def create_social_media_card(df, parameter_name="pm25"):
         t_worst = "Zona cea mai umedă"
     else:
         param_label = "Calitatea Aerului (CO / PM2.5)"
-        unit = "µg/m³" # sau ppm, în funcție de ce citește senzorul exact
+        unit = "µg/m³"
         t_day = "Cea mai poluată zi"
         t_hour = "Ora de evitat (Poluare maximă)"
         t_clean = "Zona cea mai curată"
         t_worst = "Zona cea mai poluată"
 
-    # HTML-ul folosește acum variabilele definite mai sus
     html_content = f"""
     <div style="
         width: 100%; margin: 0 auto; 
@@ -269,7 +266,7 @@ def create_social_media_card(df, parameter_name="pm25"):
     return pn.pane.HTML(html_content, sizing_mode='stretch_width')
 
 
-# ── Dashboard page ─────────────────────────────────────────────
+
 def render_dashboard_page():
     pn.extension('vega')
 
@@ -289,7 +286,7 @@ def render_dashboard_page():
 
     pn.config.raw_css.append(FONT_IMPORT + global_style + divider_style)
 
-    # ── Widgets ──────────────────────────────────────────────
+
     checkbox = pn.widgets.Checkbox(
         name='All',
         value=True,
@@ -312,7 +309,7 @@ def render_dashboard_page():
         stylesheets=[checkbox_style_square],
     )
 
-    # Sensor filter card
+
     filter_card = pn.Column(
         pn.Row(
             checkbox, checkboxTemperature, checkboxHumidity, checkboxCarbon,
@@ -323,7 +320,7 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
-    # Chart container
+
     chart_container = pn.Column(
         pn.pane.Markdown(
             "### ⏳ Waiting for data...",
@@ -369,7 +366,7 @@ def render_dashboard_page():
     counter       = pn.widgets.IntInput(value=0, visible=False)
     chart_trigger = pn.widgets.IntInput(value=0, visible=False)
 
-    # ── Checkbox mutual-exclusion logic ──────────────────────
+    
     def toggle_specific_sensors(event):
         if event.new:
             checkboxTemperature.value = False
@@ -385,7 +382,6 @@ def render_dashboard_page():
     checkboxHumidity.param.watch(toggle_all_checkbox, 'value')
     checkboxCarbon.param.watch(toggle_all_checkbox, 'value')
 
-    # ── API: historical time-series ───────────────────────────
     @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
     def fetch_data_from_api(date_range=None, datetime_value=None, location_selector_value="Centru"):
         global df_api_data
@@ -398,7 +394,6 @@ def render_dashboard_page():
             chart_container.loading = False
             return
 
-        # ← Guard: if no date range yet, fall back to today
         if not date_range or date_range[0] is None:
             date_range = (dt.date.today(), dt.date.today())
 
@@ -441,7 +436,7 @@ def render_dashboard_page():
             chart_trigger.value += 1  
 
         chart_container.loading = False
-    # ── API: current map data ─────────────────────────────────
+
     @pn.depends(
         checkbox.param.value,
         checkboxTemperature.param.value,
@@ -483,7 +478,6 @@ def render_dashboard_page():
         location_selector_value=location_selector.value,
     ))
 
-    # ── Map renderer ─────────────────────────────────────────
     @pn.depends(
         counter.param.value,
         datetime_picker.param.value,
@@ -536,7 +530,6 @@ def render_dashboard_page():
 
         return pn.pane.plot.Folium(m, height=400, styles=map_container_style)
 
-    # ── Chart updater ─────────────────────────────────────────
     @pn.depends(chart_trigger.param.value, parameter_selector.param.value, watch=True)
     def update_chart_view(c, parameter_selector):
         chart_container.loading = True   
@@ -544,7 +537,7 @@ def render_dashboard_page():
         chart_container.loading = False 
 
 
-    # ── Historical analysis card ──────────────────────────────
+
     historical_card = pn.Column(
         pn.pane.Markdown(
             "## 📈 Historical Data Analysis",
@@ -590,7 +583,6 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
-    # ── Map card ──────────────────────────────────────────────
     map_card = pn.Column(
         pn.pane.Markdown(
             "## 🗺 Live Sensor Map",
@@ -630,7 +622,6 @@ def render_dashboard_page():
         styles=card_style,
     )
 
-    # ── Forecast (XGBoost) section ────────────────────────────
     forecast_hours_slider = pn.widgets.IntSlider(
         name='Ore de predicție',
         start=6, end=72, step=6, value=24,
@@ -682,7 +673,7 @@ def render_dashboard_page():
 
     def _build_forecast_chart(hist_df, forecast_df, param, param_label, unit):
         """Build a layered Altair chart: historical + forecast + confidence band."""
-        # Last 48h of historical data for context
+  
         hist = hist_df[["timestamp", param]].copy()
         hist["timestamp"] = pd.to_datetime(hist["timestamp"])
         cutoff = hist["timestamp"].max() - pd.Timedelta(hours=48)
@@ -695,7 +686,6 @@ def render_dashboard_page():
 
         combined = pd.concat([hist, fc], ignore_index=True)
 
-        # Confidence band (±10%)
         band_df = fc.copy()
         band_df["upper"] = band_df["value"] * 1.10
         band_df["lower"] = band_df["value"] * 0.90
@@ -706,7 +696,6 @@ def render_dashboard_page():
             gridColor='#F0F2FA', domainColor='#E0E4F5',
         )
 
-        # Historical line
         hist_line = alt.Chart(combined[combined["type"] == "Istoric"]).mark_line(
             strokeWidth=2.5,
             point=alt.OverlayMarkDef(filled=True, size=40),
@@ -720,7 +709,7 @@ def render_dashboard_page():
             ],
         )
 
-        # Forecast line (dashed)
+
         fc_line = alt.Chart(combined[combined["type"] == "Predicție"]).mark_line(
             strokeDash=[6, 4], strokeWidth=2.5,
             point=alt.OverlayMarkDef(filled=True, size=40),
@@ -734,7 +723,6 @@ def render_dashboard_page():
             ],
         )
 
-        # Confidence band
         band = alt.Chart(band_df).mark_area(opacity=0.15).encode(
             x='timestamp:T',
             y='lower:Q',
@@ -742,14 +730,14 @@ def render_dashboard_page():
             color=alt.value('#F59E0B'),
         )
 
-        # Vertical line at forecast start
+
         fc_start_ts = fc["timestamp"].min()
         rule_df = pd.DataFrame({"x": [fc_start_ts]})
         rule = alt.Chart(rule_df).mark_rule(
             strokeDash=[4, 4], strokeWidth=1.5, color='#A78BFA'
         ).encode(x='x:T')
 
-        # Legend entries (manual)
+
         legend_data = pd.DataFrame({
             "label": ["Istoric", "Predicție XGBoost"],
             "color": ["#7C9EFF", "#F59E0B"],
@@ -824,7 +812,7 @@ def render_dashboard_page():
 
             chart = _build_forecast_chart(df_api_data, fc_df, param_col, param_label, unit)
 
-            # Stats summary bar
+     
             fc_mean = fc_df["forecast"].mean()
             fc_min  = fc_df["forecast"].min()
             fc_max  = fc_df["forecast"].max()
@@ -888,7 +876,7 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
-    # ── AI Chat section ───────────────────────────────────────
+  
     pn.config.raw_css.append(chat_bubble_css)
 
     chat_agent = ChatAgent()
@@ -989,19 +977,18 @@ def render_dashboard_page():
         for msg in history:
             role = msg["role"]
             content = msg["content"]
-            # Basic markdown-like formatting
+     
             content = content.replace("\n", "<br>")
-            # Bold: **text** → <b>text</b>
             import re
             content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', content)
-            # Code: `text` → <code>text</code>
+
             content = re.sub(r'`([^`]+)`', r'<code style="background:#E0E4F5;padding:2px 6px;border-radius:4px;font-size:12px;">\1</code>', content)
 
             css_class = "user" if role == "user" else "assistant"
             html += f'<div class="chat-bubble {css_class}">{content}</div>'
         html += '</div>'
 
-        # Auto-scroll to bottom
+    
         html += """
         <script>
             setTimeout(function() {
@@ -1017,14 +1004,14 @@ def render_dashboard_page():
         if not question:
             return
 
-        # Show user message immediately
+
         chat_agent.history.append({"role": "user", "content": question})
-        # Remove the appended user message since ask() will add it again
+
         chat_agent.history.pop()
 
         chat_input.value = ''
 
-        # Show loading state
+      
         loading_html = _render_chat_history(chat_agent.get_history() + [{"role": "user", "content": question}])
         loading_html = loading_html.replace(
             '</div>\n        <script>',
@@ -1032,17 +1019,17 @@ def render_dashboard_page():
         )
         chat_history_pane.object = loading_html
 
-        # Get answer from AI
+
         answer = chat_agent.ask(question)
 
-        # Update chat
+
         chat_history_pane.object = _render_chat_history(chat_agent.get_history())
 
     def _on_chat_reset(event):
         chat_agent.reset()
         chat_history_pane.object = welcome_html
 
-    # Handle Enter key submit
+
     chat_input.param.watch(lambda event: _on_chat_send(event) if event.new and event.new.endswith('\n') else None, 'value')
     chat_send_btn.on_click(_on_chat_send)
     chat_reset_btn.on_click(_on_chat_reset)
@@ -1074,12 +1061,9 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
-    # ── Page header ───────────────────────────────────────────
+
     header = pn.pane.Markdown(
-        # """
-        # # 🌿 Air Quality Dashboard
-        # Real-time environmental monitoring — Sibiu & surroundings
-        # """,
+
         styles={
             "font-family": "'DM Sans', sans-serif",
             "color": "#2D2F3E",
@@ -1090,7 +1074,6 @@ def render_dashboard_page():
         sizing_mode='stretch_width',
     )
 
-    # ── Root layout ───────────────────────────────────────────
     layout = pn.Column(
         render_navbar(active="dashboard", title="🌿 **Urban Bike Data**"),
         counter,
@@ -1113,7 +1096,7 @@ def render_dashboard_page():
     return layout
 
 
-# ── Admin page ────────────────────────────────────────────────
+
 def render_admin_page():
     pn.extension('tabulator')
     pn.config.raw_css.append(FONT_IMPORT + global_style)

@@ -89,7 +89,7 @@ def _table(data, cols=None):
     )
 
 
-# ── Tabs ──────────────────────────────────────────────────────
+
 def _sensors_tab():
     n = _notice()
     th = pn.Column(sizing_mode="stretch_width")
