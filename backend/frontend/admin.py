@@ -185,21 +185,27 @@ def _api_keys_tab():
         th.objects = [_table(data, ["id","label","user_id","user_hash","api_url","is_active","created_at"])]
     refresh()
 
-    f_lbl  = pn.widgets.TextInput(placeholder="Label",       sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    f_uid  = pn.widgets.TextInput(placeholder="X-User-id",   sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    f_hash = pn.widgets.PasswordInput(placeholder="X-User-hash", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    f_url  = pn.widgets.TextInput(placeholder="https://...", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    add_btn = pn.widgets.Button(name="➕ Add", button_type="primary", stylesheets=[_btn()])
-
-    def on_add(e):
-        n.object = ""
-        if not all([f_lbl.value, f_uid.value, f_hash.value, f_url.value]):
-            return _err(n, "All fields required.")
-        add_api_key(f_lbl.value.strip(), f_uid.value.strip(), f_hash.value.strip(), f_url.value.strip())
-        _ok(n, f"Key **{f_lbl.value}** added.")
-        for w in (f_lbl, f_uid, f_hash, f_url): w.value = ""
-        refresh()
-    add_btn.on_click(on_add)
+    # ── Manual "Add API Key" form ──────────────────────────────────
+    # Commented out: credentials are auto-generated when a user is
+    # created (see _create_user_conn → _create_api_key_for_user_conn
+    # in db.py), so manual entry is redundant for normal usage.
+    #
+    # f_lbl  = pn.widgets.TextInput(placeholder="Label",       sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # f_uid  = pn.widgets.TextInput(placeholder="X-User-id",   sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # f_hash = pn.widgets.PasswordInput(placeholder="X-User-hash", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # f_url  = pn.widgets.TextInput(placeholder="https://...", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # add_btn = pn.widgets.Button(name="➕ Add", button_type="primary", stylesheets=[_btn()])
+    #
+    # def on_add(e):
+    #     n.object = ""
+    #     if not all([f_lbl.value, f_uid.value, f_hash.value, f_url.value]):
+    #         return _err(n, "All fields required.")
+    #     add_api_key(f_lbl.value.strip(), f_uid.value.strip(), f_hash.value.strip(), f_url.value.strip())
+    #     _ok(n, f"Key **{f_lbl.value}** added.")
+    #     for w in (f_lbl, f_uid, f_hash, f_url): w.value = ""
+    #     refresh()
+    # add_btn.on_click(on_add)
+    # ───────────────────────────────────────────────────────────────
 
     t_id = pn.widgets.IntInput(placeholder="1", width=120, stylesheets=[INPUT_CSS])
     tog  = pn.widgets.Button(name="⏸ Toggle", stylesheets=[_btn("#F59E0B")])
@@ -227,19 +233,7 @@ def _api_keys_tab():
     return pn.Column(
         pn.pane.Markdown("## 🔑 API Keys", styles=SECTION_TITLE),
         pn.layout.Divider(),
-        pn.Column(
-            pn.Row(
-                pn.Column(_lbl("Label"),   f_lbl),
-                pn.Column(_lbl("API URL"), f_url),
-                sizing_mode="stretch_width", styles={"gap": "12px"},
-            ),
-            pn.Row(
-                pn.Column(_lbl("User ID"),   f_uid),
-                pn.Column(_lbl("User Hash"), f_hash),
-                sizing_mode="stretch_width", styles={"gap": "12px"},
-            ),
-            sizing_mode="stretch_width",
-        ),
+        n,
         pn.Column(
             pn.pane.Markdown("### Manage by ID", styles={"color":"#4B51A0"}),
             pn.Row(_lbl("Key ID"), t_id, tog, dl, styles={"gap":"12px","align-items":"flex-end"}),

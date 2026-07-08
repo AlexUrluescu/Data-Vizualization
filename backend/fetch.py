@@ -24,25 +24,25 @@ def fetch_location_data(
     initial_fetch_ranges = []
 
     if cached_min is None:
-        print(f"   💾 DB cache      : EMPTY — will fetch full range from API")
+        print(f"    DB cache      : EMPTY — will fetch full range from API")
         initial_fetch_ranges.append((start_dt, end_dt))
     else:
-        print(f"   💾 DB cache      : {cached_min} → {cached_max}")
+        print(f"    DB cache      : {cached_min} → {cached_max}")
 
         gap_start = (cached_min - start_dt).total_seconds()
         gap_end   = (end_dt - cached_max).total_seconds()
 
         if gap_start > TOLERANCE_SECONDS:
-            print(f"   ⚠️  Gap at START : {gap_start:.0f}s missing → fetching {start_dt} → {cached_min}")
+            print(f"     Gap at START : {gap_start:.0f}s missing → fetching {start_dt} → {cached_min}")
             initial_fetch_ranges.append((start_dt, cached_min - timedelta(seconds=1)))
         else:
-            print(f"   ✅ No gap at START (within {gap_start:.0f}s tolerance)")
+            print(f"    No gap at START (within {gap_start:.0f}s tolerance)")
 
         if gap_end > TOLERANCE_SECONDS:
-            print(f"   ⚠️  Gap at END   : {gap_end:.0f}s missing → fetching {cached_max} → {end_dt}")
+            print(f"     Gap at END   : {gap_end:.0f}s missing → fetching {cached_max} → {end_dt}")
             initial_fetch_ranges.append((cached_max + timedelta(seconds=1), end_dt))
         else:
-            print(f"   ✅ No gap at END (within {gap_end:.0f}s tolerance)")
+            print(f"    No gap at END (within {gap_end:.0f}s tolerance)")
 
 
     chunked_ranges = []
@@ -68,11 +68,11 @@ def fetch_location_data(
         mark_range_fetched(device_id, from_dt, to_dt)
 
         if not api_df.empty:
-            print(f"   ✅ API returned  : {len(api_df)} rows → saving to DB")
+            print(f"    API returned  : {len(api_df)} rows → saving to DB")
             save_to_db(api_df, device_id, location)
             frames.append(api_df)
         else:
-            print(f"   ⚠️  API returned  : 0 rows (empty or error)")
+            print(f"     API returned  : 0 rows (empty or error)")
 
     db_df = get_cached_range(device_id, start_dt, end_dt)
     if not db_df.empty:
@@ -124,7 +124,7 @@ def _fetch_from_api(
 
         api_data = response.json()
         if not isinstance(api_data, list) or len(api_data) == 0:
-            print(f"      ⚠️  API response is empty or not a list")
+            print(f"        API response is empty or not a list")
             return pd.DataFrame()
 
         df = pd.DataFrame(api_data)
@@ -133,7 +133,7 @@ def _fetch_from_api(
         df["device_id"] = device_id
         df["Location"]  = location
 
-        print(f"      ✅ Parsed {len(df)} rows | {df['timestamp'].min()} → {df['timestamp'].max()}")
+        print(f"       Parsed {len(df)} rows | {df['timestamp'].min()} → {df['timestamp'].max()}")
         return df
 
     except Exception as e:
