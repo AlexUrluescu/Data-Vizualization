@@ -17,7 +17,7 @@ def fetch_location_data(
     end_dt: datetime,
 ) -> pd.DataFrame:
     print(f"\n{'='*60}")
-    print(f"📡 fetch_location_data | {location} ({device_id})")
+    print(f"fetch_location_data | {location} ({device_id})")
     print(f"   Requested range : {start_dt} → {end_dt}")
 
     cached_min, cached_max = get_cached_boundaries(device_id, start_dt, end_dt)
@@ -55,14 +55,14 @@ def fetch_location_data(
 
     frames = []
     if not chunked_ranges:
-        print(f"   🚀 Source        : DB ONLY (no API call needed)")
+        print(f"    Source        : DB ONLY (no API call needed)")
     
     for (from_dt, to_dt) in chunked_ranges:
         if is_range_fetched(device_id, from_dt, to_dt):
-                print(f"   ⏭️  Skip API (deja interogat): {from_dt} → {to_dt}")
+                print(f"Skip API (deja interogat): {from_dt} → {to_dt}")
                 continue
 
-        print(f"   🌐 API fetch chunk: {from_dt.date()} to {to_dt.date()}")
+        print(f"  API fetch chunk: {from_dt.date()} to {to_dt.date()}")
         api_df = _fetch_from_api(device_id, location, from_dt, to_dt)
 
         mark_range_fetched(device_id, from_dt, to_dt)
@@ -76,13 +76,13 @@ def fetch_location_data(
 
     db_df = get_cached_range(device_id, start_dt, end_dt)
     if not db_df.empty:
-        print(f"   📦 DB returned   : {len(db_df)} rows")
+        print(f" DB returned   : {len(db_df)} rows")
         frames.append(db_df)
     else:
-        print(f"   📦 DB returned   : 0 rows")
+        print(f" DB returned   : 0 rows")
 
     if not frames:
-        print(f"   ❌ Final result  : no data available")
+        print(f"   Final result  : no data available")
         print(f"{'='*60}\n")
         return pd.DataFrame()
 
@@ -119,7 +119,7 @@ def _fetch_from_api(
         print(f"      ← HTTP {response.status_code}")
 
         if response.status_code != 200:
-            print(f"      ❌ API Error {response.status_code} for {location}")
+            print(f"      API Error {response.status_code} for {location}")
             return pd.DataFrame()
 
         api_data = response.json()
@@ -137,5 +137,5 @@ def _fetch_from_api(
         return df
 
     except Exception as e:
-        print(f"      ❌ Exception fetching API for {location}: {e}")
+        print(f"     Exception fetching API for {location}: {e}")
         return pd.DataFrame()

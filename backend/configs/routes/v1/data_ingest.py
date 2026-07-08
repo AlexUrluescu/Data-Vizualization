@@ -33,10 +33,12 @@ Authentication:
 from flask import Blueprint, request, jsonify
 import pandas as pd
 from datetime import datetime, timezone
-
 from db import save_to_db, list_api_keys
 
 data_ingest_bp = Blueprint("data_ingest", __name__)
+
+REQUIRED_FIELDS = {"device_id", "location"}
+NUMERIC_FIELDS  = ("temperature", "pressure", "humidity", "pm1", "pm25", "pm10")
 
 
 def _authenticate(req) -> tuple[bool, str]:
@@ -59,10 +61,6 @@ def _authenticate(req) -> tuple[bool, str]:
         return False, "Invalid or inactive API credentials."
 
     return True, ""
-
-
-REQUIRED_FIELDS = {"device_id", "location"}
-NUMERIC_FIELDS  = ("temperature", "pressure", "humidity", "pm1", "pm25", "pm10")
 
 
 def _parse_record(raw: dict) -> tuple[dict | None, str]:

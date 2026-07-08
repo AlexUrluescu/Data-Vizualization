@@ -1,13 +1,8 @@
 from flask import Blueprint
-from configs.config import Config
 from bokeh.embed import server_document
-import frontend.panel_app as panel_app
 from flask import render_template
 
 render_admin_page = Blueprint("render_admin_page", __name__)
-db = Config.get_db()
-cars_collection = db["cars"]
-cities_collection = db["cities"]
 
 @render_admin_page.route("/", methods=["GET"])
 def index():
