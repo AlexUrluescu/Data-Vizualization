@@ -1,4 +1,3 @@
-
 FONT_IMPORT = """
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@400;500&display=swap');
 """
@@ -263,8 +262,10 @@ chart_container_style = {
     "min-height": "320px",
 }
 
+
 def section_label(text: str, emoji: str = "") -> str:
     return f"### {emoji} {text}" if emoji else f"### {text}"
+
 
 forecast_card_style = {
     "background": "#FFFFFF",

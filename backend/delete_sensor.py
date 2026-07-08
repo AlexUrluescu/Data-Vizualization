@@ -1,6 +1,6 @@
-
 import sys
 from db import get_conn
+
 
 def hard_delete_sensor(sensor_id: str):
     sensor_id = sensor_id.strip().upper()
@@ -16,6 +16,7 @@ def hard_delete_sensor(sensor_id: str):
             return
         conn.execute("DELETE FROM sensors WHERE id=?", (sensor_id,))
         print(f"✓ Sensor '{sensor_id}' deleted.")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

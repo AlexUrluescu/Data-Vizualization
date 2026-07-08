@@ -1,5 +1,6 @@
 from bson import ObjectId
 
+
 def convert_objectid(obj):
     if isinstance(obj, list):
         return [convert_objectid(item) for item in obj]

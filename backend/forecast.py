@@ -11,7 +11,6 @@ import numpy as np
 from xgboost import XGBRegressor
 
 
-
 def build_features(df: pd.DataFrame, param: str) -> pd.DataFrame:
     """
     Accepts a DataFrame with a DatetimeIndex and a target column `param`.
@@ -19,30 +18,40 @@ def build_features(df: pd.DataFrame, param: str) -> pd.DataFrame:
     """
     out = df[[param]].copy()
 
-
-    out["hour"]        = out.index.hour
+    out["hour"] = out.index.hour
     out["day_of_week"] = out.index.dayofweek
     out["day_of_year"] = out.index.dayofyear
-    out["month"]       = out.index.month
+    out["month"] = out.index.month
 
     out["hour_sin"] = np.sin(2 * np.pi * out["hour"] / 24)
     out["hour_cos"] = np.cos(2 * np.pi * out["hour"] / 24)
-    out["dow_sin"]  = np.sin(2 * np.pi * out["day_of_week"] / 7)
-    out["dow_cos"]  = np.cos(2 * np.pi * out["day_of_week"] / 7)
+    out["dow_sin"] = np.sin(2 * np.pi * out["day_of_week"] / 7)
+    out["dow_cos"] = np.cos(2 * np.pi * out["day_of_week"] / 7)
 
     for lag in [1, 3, 6, 12, 24]:
         out[f"lag_{lag}h"] = out[param].shift(lag)
-    out["rolling_6h"]  = out[param].shift(1).rolling(6,  min_periods=1).mean()
+    out["rolling_6h"] = out[param].shift(1).rolling(6, min_periods=1).mean()
     out["rolling_24h"] = out[param].shift(1).rolling(24, min_periods=1).mean()
 
     return out
 
 
 FEATURE_COLS = [
-    "hour", "day_of_week", "day_of_year", "month",
-    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
-    "lag_1h", "lag_3h", "lag_6h", "lag_12h", "lag_24h",
-    "rolling_6h", "rolling_24h",
+    "hour",
+    "day_of_week",
+    "day_of_year",
+    "month",
+    "hour_sin",
+    "hour_cos",
+    "dow_sin",
+    "dow_cos",
+    "lag_1h",
+    "lag_3h",
+    "lag_6h",
+    "lag_12h",
+    "lag_24h",
+    "rolling_6h",
+    "rolling_24h",
 ]
 
 

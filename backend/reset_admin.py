@@ -1,5 +1,5 @@
-
-import sqlite3, hashlib
+import sqlite3
+import hashlib
 
 new_password = "urbanbike2026"
 new_hash = hashlib.sha256(new_password.encode()).hexdigest()

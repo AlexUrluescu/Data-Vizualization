@@ -3,24 +3,29 @@ import folium
 import altair as alt
 import pandas as pd
 import datetime as dt
-import numpy as np
 import requests
 import os
 from dotenv import load_dotenv
 from db import init_db, list_sensors
 from fetch import fetch_location_data
-from datetime import datetime, timezone
-import altair as alt
 from .util_functions import getParameter, get_api_intervals, generate_popup_content
 from insights import generate_period_insights
 from forecast import train_and_forecast
 from chat import ChatAgent
 from .navbar import render_navbar
 from .css import (
-    date_picker_style, my_custom_style, checkbox_style_square,
-    card_style, chart_container_style, map_container_style,
-    FONT_IMPORT, global_style, section_label, divider_style,
-    forecast_card_style, chat_card_style, chat_bubble_css,
+    date_picker_style,
+    my_custom_style,
+    checkbox_style_square,
+    card_style,
+    chart_container_style,
+    map_container_style,
+    FONT_IMPORT,
+    global_style,
+    divider_style,
+    forecast_card_style,
+    chat_card_style,
+    chat_bubble_css,
 )
 
 alt.data_transformers.disable_max_rows()
@@ -44,12 +49,10 @@ USER_HASH = os.getenv("USER_HASH")
 # ]
 
 metadata_senzori = [
-    {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]}
-    for s in list_sensors()
-    if s["is_active"]
+    {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]} for s in list_sensors() if s["is_active"]
 ]
 
-current_state = {s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
+current_state = {s["id"]: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori}
 
 df_api_data = pd.DataFrame()
 
@@ -63,7 +66,7 @@ def get_temperature_plot(parameter_selector):
                 "text-align": "center",
                 "padding": "60px 0",
                 "font-family": "'DM Sans', sans-serif",
-            }
+            },
         )
 
     parameter_data = getParameter(parameter_selector)
@@ -72,98 +75,106 @@ def get_temperature_plot(parameter_selector):
     data_min = df_api_data[param_name].min()
     data_max = df_api_data[param_name].max()
     padding = (data_max - data_min) * 0.1 if data_max != data_min else 1.0
-    if pd.isna(data_min): data_min = 0
-    if pd.isna(data_max): data_max = 10
+    if pd.isna(data_min):
+        data_min = 0
+    if pd.isna(data_max):
+        data_max = 10
 
     domain_start = data_min - padding
-    domain_end   = data_max + padding
+    domain_end = data_max + padding
 
     background_zones = []
 
-    if 'temperature' in param_name.lower():
+    if "temperature" in param_name.lower():
         background_zones = [
-            {'y_start': -30, 'y_end': 0,  'color': "#B8E4F5", 'label': 'Freezing (<0°C)'},
-            {'y_start':   0, 'y_end': 10, 'color': "#D6EEF8", 'label': 'Cold (<10°C)'},
-            {'y_start':  10, 'y_end': 20, 'color': "#C8F5D0", 'label': 'Comfortable'},
-            {'y_start':  20, 'y_end': 30, 'color': "#FFE4C4", 'label': 'Warm'},
-            {'y_start':  30, 'y_end': 60, 'color': "#FFB8B8", 'label': 'Hot (>30°C)'},
+            {"y_start": -30, "y_end": 0, "color": "#B8E4F5", "label": "Freezing (<0°C)"},
+            {"y_start": 0, "y_end": 10, "color": "#D6EEF8", "label": "Cold (<10°C)"},
+            {"y_start": 10, "y_end": 20, "color": "#C8F5D0", "label": "Comfortable"},
+            {"y_start": 20, "y_end": 30, "color": "#FFE4C4", "label": "Warm"},
+            {"y_start": 30, "y_end": 60, "color": "#FFB8B8", "label": "Hot (>30°C)"},
         ]
-    elif 'humidity' in param_name.lower():
+    elif "humidity" in param_name.lower():
         background_zones = [
-            {'y_start':  0, 'y_end': 30,  'color': '#FFF5CC', 'label': 'Dry (<30%)'},
-            {'y_start': 30, 'y_end': 70,  'color': '#D0F0C0', 'label': 'Comfortable'},
-            {'y_start': 70, 'y_end': 100, 'color': '#C8E8FF', 'label': 'Humid (>70%)'},
+            {"y_start": 0, "y_end": 30, "color": "#FFF5CC", "label": "Dry (<30%)"},
+            {"y_start": 30, "y_end": 70, "color": "#D0F0C0", "label": "Comfortable"},
+            {"y_start": 70, "y_end": 100, "color": "#C8E8FF", "label": "Humid (>70%)"},
         ]
-    elif 'pm25' in param_name.lower() or 'carbon' in param_name.lower():
+    elif "pm25" in param_name.lower() or "carbon" in param_name.lower():
         background_zones = [
-            {'y_start':   0, 'y_end':  50,  'color': '#C8F5D0', 'label': 'Good'},
-            {'y_start':  51, 'y_end': 100,  'color': '#FFF5CC', 'label': 'Moderate'},
-            {'y_start': 101, 'y_end': 150,  'color': '#FFE0B0', 'label': 'Unhealthy'},
-            {'y_start': 151, 'y_end': 200,  'color': '#FFB8B8', 'label': 'Very Unhealthy'},
+            {"y_start": 0, "y_end": 50, "color": "#C8F5D0", "label": "Good"},
+            {"y_start": 51, "y_end": 100, "color": "#FFF5CC", "label": "Moderate"},
+            {"y_start": 101, "y_end": 150, "color": "#FFE0B0", "label": "Unhealthy"},
+            {"y_start": 151, "y_end": 200, "color": "#FFB8B8", "label": "Very Unhealthy"},
         ]
 
     df_bg = pd.DataFrame(background_zones)
 
-    bg_chart = alt.Chart(df_bg).mark_rect(opacity=0.35).encode(
-        y='y_start:Q',
-        y2='y_end:Q',
-        color=alt.Color('color:N', scale=None),
-        tooltip='label'
+    bg_chart = (
+        alt.Chart(df_bg)
+        .mark_rect(opacity=0.35)
+        .encode(y="y_start:Q", y2="y_end:Q", color=alt.Color("color:N", scale=None), tooltip="label")
     )
 
     pastel_palette = [
-        "#7C9EFF", "#F9A8D4", "#6EE7B7", "#FCD34D",
-        "#C4B5FD", "#FCA5A5", "#67E8F9", "#A3E635",
+        "#7C9EFF",
+        "#F9A8D4",
+        "#6EE7B7",
+        "#FCD34D",
+        "#C4B5FD",
+        "#FCA5A5",
+        "#67E8F9",
+        "#A3E635",
     ]
 
-    line_chart = alt.Chart(df_api_data).mark_line(
-        point=alt.OverlayMarkDef(filled=True, size=60),
-        strokeWidth=2.5
-    ).encode(
-        x=alt.X(
-            'timestamp:T',
-            title='Time',
-            axis=alt.Axis(
-                format='%H:%M',
-                labelFont='DM Sans',
-                titleFont='DM Sans',
-                labelColor='#7B82B4',
-                titleColor='#5A5F94',
-                gridColor='#F0F2FA',
-                domainColor='#E0E4F5',
-            )
-        ),
-        y=alt.Y(
-            f'{param_name}:Q',
-            title=parameter_data["subtitle"],
-            scale=alt.Scale(domain=[domain_start, domain_end]),
-            axis=alt.Axis(
-                labelFont='DM Sans',
-                titleFont='DM Sans',
-                labelColor='#7B82B4',
-                titleColor='#5A5F94',
-                gridColor='#F0F2FA',
-                domainColor='#E0E4F5',
-            )
-        ),
-        color=alt.Color(
-            'Location:N',
-            scale=alt.Scale(range=pastel_palette),
-            legend=alt.Legend(
-                title="Locations",
-                titleFont='DM Sans',
-                labelFont='DM Sans',
-                titleColor='#5A5F94',
-                labelColor='#2D2F3E',
-            )
-        ),
-        tooltip=[
-            alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'),
-            'Location',
-            'temperature',
-            'humidity',
-            'pm25',
-        ]
+    line_chart = (
+        alt.Chart(df_api_data)
+        .mark_line(point=alt.OverlayMarkDef(filled=True, size=60), strokeWidth=2.5)
+        .encode(
+            x=alt.X(
+                "timestamp:T",
+                title="Time",
+                axis=alt.Axis(
+                    format="%H:%M",
+                    labelFont="DM Sans",
+                    titleFont="DM Sans",
+                    labelColor="#7B82B4",
+                    titleColor="#5A5F94",
+                    gridColor="#F0F2FA",
+                    domainColor="#E0E4F5",
+                ),
+            ),
+            y=alt.Y(
+                f"{param_name}:Q",
+                title=parameter_data["subtitle"],
+                scale=alt.Scale(domain=[domain_start, domain_end]),
+                axis=alt.Axis(
+                    labelFont="DM Sans",
+                    titleFont="DM Sans",
+                    labelColor="#7B82B4",
+                    titleColor="#5A5F94",
+                    gridColor="#F0F2FA",
+                    domainColor="#E0E4F5",
+                ),
+            ),
+            color=alt.Color(
+                "Location:N",
+                scale=alt.Scale(range=pastel_palette),
+                legend=alt.Legend(
+                    title="Locations",
+                    titleFont="DM Sans",
+                    labelFont="DM Sans",
+                    titleColor="#5A5F94",
+                    labelColor="#2D2F3E",
+                ),
+            ),
+            tooltip=[
+                alt.Tooltip("timestamp:T", format="%Y-%m-%d %H:%M"),
+                "Location",
+                "temperature",
+                "humidity",
+                "pm25",
+            ],
+        )
     )
 
     final_chart = (
@@ -171,16 +182,16 @@ def get_temperature_plot(parameter_selector):
         .properties(
             title=alt.TitleParams(
                 parameter_data["title"],
-                font='DM Sans',
+                font="DM Sans",
                 fontSize=15,
                 fontWeight=600,
-                color='#2D2F3E',
-                anchor='start',
+                color="#2D2F3E",
+                anchor="start",
                 offset=8,
             ),
             height=460,
-            width='container',
-            background='#FFFFFF',
+            width="container",
+            background="#FFFFFF",
         )
         .configure_view(
             strokeWidth=0,
@@ -188,23 +199,23 @@ def get_temperature_plot(parameter_selector):
         .interactive()
     )
 
-    return pn.pane.Vega(final_chart, sizing_mode='stretch_width')
+    return pn.pane.Vega(final_chart, sizing_mode="stretch_width")
 
 
 def create_social_media_card(df, parameter_name="pm25"):
     insights = generate_period_insights(df, parameter_name)
-    
+
     if "error" in insights:
         return pn.pane.Markdown(f"### ⚠️ {insights['error']}", styles={"color": "red"})
 
-    if parameter_name == 'temperature':
+    if parameter_name == "temperature":
         param_label = "Temperatură"
         unit = "°C"
         t_day = "Cea mai călduroasă zi"
         t_hour = "Ora cea mai caldă (Media)"
         t_clean = "Zona cea mai răcoroasă"
         t_worst = "Zona cea mai caldă"
-    elif parameter_name == 'humidity':
+    elif parameter_name == "humidity":
         param_label = "Umiditate"
         unit = "%"
         t_day = "Cea mai umedă zi"
@@ -235,27 +246,27 @@ def create_social_media_card(df, parameter_name="pm25"):
 
         <div style="background: #FFF; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #FFB8B8; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
             <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_day}</div>
-            <div style="font-size: 18px; font-weight: bold; color: #2D2F3E;">{insights['worst_day_date']} <span style="color: #FF5733; font-size: 16px;">({insights['worst_day_val']} {unit})</span></div>
+            <div style="font-size: 18px; font-weight: bold; color: #2D2F3E;">{insights["worst_day_date"]} <span style="color: #FF5733; font-size: 16px;">({insights["worst_day_val"]} {unit})</span></div>
         </div>
 
         <div style="background: #FFF; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #FCD34D; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
             <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_hour}</div>
-            <div style="font-size: 18px; font-weight: bold; color: #2D2F3E;">🕒 {insights['worst_hour_interval']}</div>
+            <div style="font-size: 18px; font-weight: bold; color: #2D2F3E;">🕒 {insights["worst_hour_interval"]}</div>
         </div>
 
         <div style="display: flex; gap: 15px; margin-bottom: 15px;">
             <div style="flex: 1; background: #FFF; border-radius: 12px; padding: 15px; border-left: 5px solid #6EE7B7; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                 <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_clean}</div>
-                <div style="font-size: 16px; font-weight: bold;">{insights['cleanest_loc']}</div>
+                <div style="font-size: 16px; font-weight: bold;">{insights["cleanest_loc"]}</div>
             </div>
             <div style="flex: 1; background: #FFF; border-radius: 12px; padding: 15px; border-left: 5px solid #FCA5A5; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                 <div style="font-size: 12px; color: #7B82B4; text-transform: uppercase;">{t_worst}</div>
-                <div style="font-size: 16px; font-weight: bold;">{insights['worst_loc']}</div>
+                <div style="font-size: 16px; font-weight: bold;">{insights["worst_loc"]}</div>
             </div>
         </div>
 
         <div style="background: #EEF0FF; border-radius: 12px; padding: 20px; text-align: center; color: #4B51A0;">
-            <i>{insights['weekend_comparison'].replace('**', '<b>').replace('**', '</b>')}</i>
+            <i>{insights["weekend_comparison"].replace("**", "<b>").replace("**", "</b>")}</i>
         </div>
         
         <div style="text-align: center; margin-top: 25px; font-size: 11px; color: #A5B4FC;">
@@ -263,124 +274,118 @@ def create_social_media_card(df, parameter_name="pm25"):
         </div>
     </div>
     """
-    return pn.pane.HTML(html_content, sizing_mode='stretch_width')
-
+    return pn.pane.HTML(html_content, sizing_mode="stretch_width")
 
 
 def render_dashboard_page():
-    pn.extension('vega')
+    pn.extension("vega")
 
     metadata_senzori = [
-        {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]}
-        for s in list_sensors()
-        if s["is_active"]
+        {"id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"]} for s in list_sensors() if s["is_active"]
     ]
 
     name_to_id = {s["name"]: s["id"] for s in metadata_senzori}
 
     current_state = {
-        s['id']: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0}
-        for s in metadata_senzori
+        s["id"]: {"temp": 0.0, "status": "Activ", "humidity": 0.0, "carbon": 0.0} for s in metadata_senzori
     }
-
 
     pn.config.raw_css.append(FONT_IMPORT + global_style + divider_style)
 
-
     checkbox = pn.widgets.Checkbox(
-        name='All',
+        name="All",
         value=True,
-        css_classes=['styled-checkbox'],
+        css_classes=["styled-checkbox"],
         stylesheets=[checkbox_style_square],
     )
     checkboxTemperature = pn.widgets.Checkbox(
-        name='🌡 Temperature',
-        css_classes=['styled-checkbox'],
+        name="🌡 Temperature",
+        css_classes=["styled-checkbox"],
         stylesheets=[checkbox_style_square],
     )
     checkboxHumidity = pn.widgets.Checkbox(
-        name='💧 Humidity',
-        css_classes=['styled-checkbox'],
+        name="💧 Humidity",
+        css_classes=["styled-checkbox"],
         stylesheets=[checkbox_style_square],
     )
     checkboxCarbon = pn.widgets.Checkbox(
-        name='🌫 CO / PM2.5',
-        css_classes=['styled-checkbox'],
+        name="🌫 CO / PM2.5",
+        css_classes=["styled-checkbox"],
         stylesheets=[checkbox_style_square],
     )
 
-
     filter_card = pn.Column(
         pn.Row(
-            checkbox, checkboxTemperature, checkboxHumidity, checkboxCarbon,
-            sizing_mode='stretch_width',
-            styles={'gap': '10px', 'flex-wrap': 'wrap', 'align-items': 'center'},
+            checkbox,
+            checkboxTemperature,
+            checkboxHumidity,
+            checkboxCarbon,
+            sizing_mode="stretch_width",
+            styles={"gap": "10px", "flex-wrap": "wrap", "align-items": "center"},
         ),
         styles=card_style,
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
-
 
     chart_container = pn.Column(
         pn.pane.Markdown(
             "### ⏳ Waiting for data...",
             styles={"color": "#7B82B4", "padding": "60px 0", "text-align": "center"},
         ),
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
         min_height=300,
         styles=chart_container_style,
     )
 
     location_selector = pn.widgets.CheckBoxGroup(
-        name='Locations',
-        options=[s["name"] for s in metadata_senzori], 
+        name="Locations",
+        options=[s["name"] for s in metadata_senzori],
         value=[metadata_senzori[0]["name"]] if metadata_senzori else [],
         inline=True,
-        css_classes=['location-selector'],
+        css_classes=["location-selector"],
         stylesheets=[my_custom_style],
     )
 
     parameter_selector = pn.widgets.RadioBoxGroup(
-        name='Parameters',
-        options=['Temperature', 'Humidity', 'Carbon Monoxide'],
-        value='Temperature',
+        name="Parameters",
+        options=["Temperature", "Humidity", "Carbon Monoxide"],
+        value="Temperature",
         inline=True,
-        css_classes=['location-selector'],
+        css_classes=["location-selector"],
         stylesheets=[my_custom_style],
     )
 
     today = dt.date.today()
     date_range_picker = pn.widgets.DateRangePicker(
-        name='Date Range',
+        name="Date Range",
         value=(today, today),
-        css_classes=['my-date-picker'],
+        css_classes=["my-date-picker"],
         stylesheets=[date_picker_style],
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
     datetime_picker = pn.widgets.DatetimePicker(
-        name='Selectează Ora din Istoric',
+        name="Selectează Ora din Istoric",
         value=dt.datetime.now(),
     )
 
-    counter       = pn.widgets.IntInput(value=0, visible=False)
+    counter = pn.widgets.IntInput(value=0, visible=False)
     chart_trigger = pn.widgets.IntInput(value=0, visible=False)
 
-    
     def toggle_specific_sensors(event):
         if event.new:
             checkboxTemperature.value = False
-            checkboxHumidity.value    = False
-            checkboxCarbon.value      = False
+            checkboxHumidity.value = False
+            checkboxCarbon.value = False
 
     def toggle_all_checkbox(event):
         if event.new:
             checkbox.value = False
 
-    checkbox.param.watch(toggle_specific_sensors, 'value')
-    checkboxTemperature.param.watch(toggle_all_checkbox, 'value')
-    checkboxHumidity.param.watch(toggle_all_checkbox, 'value')
-    checkboxCarbon.param.watch(toggle_all_checkbox, 'value')
+    checkbox.param.watch(toggle_specific_sensors, "value")
+    checkboxTemperature.param.watch(toggle_all_checkbox, "value")
+    checkboxHumidity.param.watch(toggle_all_checkbox, "value")
+    checkboxCarbon.param.watch(toggle_all_checkbox, "value")
 
     @pn.depends(date_range_picker.param.value, datetime_picker.param.value, location_selector.param.value, watch=True)
     def fetch_data_from_api(date_range=None, datetime_value=None, location_selector_value="Centru"):
@@ -406,7 +411,6 @@ def render_dashboard_page():
             chart_container.loading = False
             return
 
-
         all_data_frames = []
 
         for loc_name in location_selector_value:
@@ -421,9 +425,9 @@ def render_dashboard_page():
                     all_data_frames.append(df)
                     last = df.iloc[-1]
                     if device_id in current_state:
-                        current_state[device_id]["temp"]     = float(last.get("temperature") or 0)
+                        current_state[device_id]["temp"] = float(last.get("temperature") or 0)
                         current_state[device_id]["humidity"] = float(last.get("humidity") or 0)
-                        current_state[device_id]["carbon"]   = float(last.get("pm25") or 0)
+                        current_state[device_id]["carbon"] = float(last.get("pm25") or 0)
 
             except Exception as e:
                 print(f"Error processing {loc_name}: {e}")
@@ -433,7 +437,7 @@ def render_dashboard_page():
             chart_trigger.value += 1
         else:
             df_api_data = pd.DataFrame()
-            chart_trigger.value += 1  
+            chart_trigger.value += 1
 
         chart_container.loading = False
 
@@ -452,14 +456,14 @@ def render_dashboard_page():
             if response.status_code == 200:
                 api_data = response.json()
                 for item in api_data:
-                    api_id        = item.get("id")
-                    temp_value    = item.get("last_temperature")
+                    api_id = item.get("id")
+                    temp_value = item.get("last_temperature")
                     humidity_value = item.get("last_humidity")
-                    carbon_value  = item.get("last_pm25")
+                    carbon_value = item.get("last_pm25")
                     if api_id in current_state and temp_value is not None:
-                        current_state[api_id]["temp"]     = float(temp_value)
+                        current_state[api_id]["temp"] = float(temp_value)
                         current_state[api_id]["humidity"] = float(humidity_value)
-                        current_state[api_id]["carbon"]   = float(carbon_value)
+                        current_state[api_id]["carbon"] = float(carbon_value)
                         if float(temp_value) == 0:
                             current_state[api_id]["status"] = "Inactiv"
                         elif float(temp_value) > 30:
@@ -472,11 +476,13 @@ def render_dashboard_page():
 
     pn.state.add_periodic_callback(fetch_data_for_map, period=300000)
     pn.state.onload(fetch_data_for_map)
-    pn.state.onload(lambda: fetch_data_from_api(
-        date_range=date_range_picker.value,
-        datetime_value=datetime_picker.value,
-        location_selector_value=location_selector.value,
-    ))
+    pn.state.onload(
+        lambda: fetch_data_from_api(
+            date_range=date_range_picker.value,
+            datetime_value=datetime_picker.value,
+            location_selector_value=location_selector.value,
+        )
+    )
 
     @pn.depends(
         counter.param.value,
@@ -490,53 +496,60 @@ def render_dashboard_page():
         m = folium.Map(
             location=[45.7983, 24.1256],
             zoom_start=13,
-            tiles='CartoDB positron',  
+            tiles="CartoDB positron",
         )
 
-      
-        m.get_root().header.add_child(folium.Element("""
+        m.get_root().header.add_child(
+            folium.Element("""
         <style>
             @media (hover: none), (max-width: 768px) {
                 .leaflet-tooltip { display: none !important; }
             }
         </style>
-        """))
+        """)
+        )
 
         for senzor_meta in metadata_senzori:
-            s_id = senzor_meta['id']
-            data  = current_state[s_id]
-            temp     = data['temp']
-            humidity = data['humidity']
-            carbon   = data['carbon']
-            status   = data['status']
+            s_id = senzor_meta["id"]
+            data = current_state[s_id]
+            temp = data["temp"]
+            humidity = data["humidity"]
+            carbon = data["carbon"]
+            status = data["status"]
             timestamp_str = "Acum"
 
-            color = 'green'
-            if status in ('Inactiv', 'Fără Date'):
-                color = 'gray'
-            elif status == 'Alertă':
-                color = 'red'
+            color = "green"
+            if status in ("Inactiv", "Fără Date"):
+                color = "gray"
+            elif status == "Alertă":
+                color = "red"
 
             popup_content = generate_popup_content(
-                all_checked, temp_checked, humidity_checked, carbon_checked,
-                senzor_meta, status, temp, humidity, carbon, timestamp_str,
+                all_checked,
+                temp_checked,
+                humidity_checked,
+                carbon_checked,
+                senzor_meta,
+                status,
+                temp,
+                humidity,
+                carbon,
+                timestamp_str,
             )
             folium.Marker(
-                location=[senzor_meta['lat'], senzor_meta['lon']],
+                location=[senzor_meta["lat"], senzor_meta["lon"]],
                 popup=popup_content,
                 tooltip=popup_content,
-                icon=folium.Icon(color=color, icon='info-sign'),
+                icon=folium.Icon(color=color, icon="info-sign"),
             ).add_to(m)
 
         return pn.pane.plot.Folium(m, height=400, styles=map_container_style)
 
     @pn.depends(chart_trigger.param.value, parameter_selector.param.value, watch=True)
     def update_chart_view(c, parameter_selector):
-        chart_container.loading = True   
+        chart_container.loading = True
         chart_container.objects = [get_temperature_plot(parameter_selector)]
-        chart_container.loading = False 
-
-
+        chart_container.loading = False
 
     historical_card = pn.Column(
         pn.pane.Markdown(
@@ -555,32 +568,42 @@ def render_dashboard_page():
             pn.Column(
                 pn.pane.Markdown(
                     "**Locations**",
-                    styles={"color": "#5A5F94", "font-size": "11px", "text-transform": "uppercase",
-                            "letter-spacing": "0.06em", "margin-bottom": "6px"},
+                    styles={
+                        "color": "#5A5F94",
+                        "font-size": "11px",
+                        "text-transform": "uppercase",
+                        "letter-spacing": "0.06em",
+                        "margin-bottom": "6px",
+                    },
                 ),
                 location_selector,
-                sizing_mode='stretch_width',
+                sizing_mode="stretch_width",
             ),
             pn.Column(
                 pn.pane.Markdown(
                     "**Parameter**",
-                    styles={"color": "#5A5F94", "font-size": "11px", "text-transform": "uppercase",
-                            "letter-spacing": "0.06em", "margin-bottom": "6px"},
+                    styles={
+                        "color": "#5A5F94",
+                        "font-size": "11px",
+                        "text-transform": "uppercase",
+                        "letter-spacing": "0.06em",
+                        "margin-bottom": "6px",
+                    },
                 ),
                 parameter_selector,
-                sizing_mode='stretch_width',
+                sizing_mode="stretch_width",
             ),
             pn.Column(
                 date_range_picker,
-                sizing_mode='stretch_width',
+                sizing_mode="stretch_width",
             ),
-            sizing_mode='stretch_width',
-            styles={'gap': '24px', 'flex-wrap': 'wrap', 'align-items': 'flex-start'},
+            sizing_mode="stretch_width",
+            styles={"gap": "24px", "flex-wrap": "wrap", "align-items": "flex-start"},
         ),
         pn.layout.Divider(),
         chart_container,
         styles=card_style,
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
     map_card = pn.Column(
@@ -595,13 +618,15 @@ def render_dashboard_page():
         filter_card,
         get_map,
         styles={**card_style, "background": "#FFFFFF"},
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
     infographic_container = pn.Column(
-        pn.pane.Markdown("Selectează datele de mai sus și așteaptă încărcarea pentru a genera raportul.", styles={"color": "#7B82B4"}),
-        sizing_mode='stretch_width',
-        align='center'
+        pn.pane.Markdown(
+            "Selectează datele de mai sus și așteaptă încărcarea pentru a genera raportul.", styles={"color": "#7B82B4"}
+        ),
+        sizing_mode="stretch_width",
+        align="center",
     )
 
     @pn.depends(chart_trigger.param.value, parameter_selector.param.value, watch=True)
@@ -609,35 +634,45 @@ def render_dashboard_page():
         global df_api_data
         if not df_api_data.empty:
             param_col = "temperature"
-            if parameter_selector == 'Humidity': param_col = "humidity"
-            if parameter_selector == 'Carbon Monoxide': param_col = "pm25"
-            
+            if parameter_selector == "Humidity":
+                param_col = "humidity"
+            if parameter_selector == "Carbon Monoxide":
+                param_col = "pm25"
+
             infographic_container.objects = [create_social_media_card(df_api_data, param_col)]
         else:
-             infographic_container.objects = [pn.pane.Markdown("Nu sunt date suficiente.", styles={"color": "#7B82B4"})]
+            infographic_container.objects = [pn.pane.Markdown("Nu sunt date suficiente.", styles={"color": "#7B82B4"})]
 
     report_card = pn.Column(
-        pn.pane.Markdown("## 📱 Raport Social Media", styles={"font-family": "'DM Sans', sans-serif", "color": "#2D2F3E"}),
+        pn.pane.Markdown(
+            "## 📱 Raport Social Media", styles={"font-family": "'DM Sans', sans-serif", "color": "#2D2F3E"}
+        ),
         infographic_container,
         styles=card_style,
     )
 
     forecast_hours_slider = pn.widgets.IntSlider(
-        name='Ore de predicție',
-        start=6, end=72, step=6, value=24,
-        bar_color='#A78BFA',
-        stylesheets=["""
+        name="Ore de predicție",
+        start=6,
+        end=72,
+        step=6,
+        value=24,
+        bar_color="#A78BFA",
+        stylesheets=[
+            """
         :host { font-family: 'DM Sans', sans-serif !important; }
         label { font-size: 12px !important; color: #5A5F94 !important;
                 font-weight: 600 !important; letter-spacing: 0.04em !important; }
-        """],
+        """
+        ],
     )
 
     forecast_btn = pn.widgets.Button(
-        name='Generează Forecast',
-        button_type='primary',
+        name="Generează Forecast",
+        button_type="primary",
         width=200,
-        stylesheets=["""
+        stylesheets=[
+            """
         :host button {
             font-family: 'DM Sans', sans-serif !important;
             font-size: 13px !important;
@@ -652,7 +687,8 @@ def render_dashboard_page():
             box-shadow: 0 4px 14px rgba(167, 139, 250, 0.35) !important;
         }
         :host button:hover { opacity: 0.88 !important; }
-        """],
+        """
+        ],
     )
 
     forecast_container = pn.Column(
@@ -665,15 +701,15 @@ def render_dashboard_page():
                 pentru a vedea predicțiile XGBoost.
             </div>
             """,
-            sizing_mode='stretch_width',
+            sizing_mode="stretch_width",
         ),
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
         min_height=200,
     )
 
     def _build_forecast_chart(hist_df, forecast_df, param, param_label, unit):
         """Build a layered Altair chart: historical + forecast + confidence band."""
-  
+
         hist = hist_df[["timestamp", param]].copy()
         hist["timestamp"] = pd.to_datetime(hist["timestamp"])
         cutoff = hist["timestamp"].max() - pd.Timedelta(hours=48)
@@ -691,76 +727,103 @@ def render_dashboard_page():
         band_df["lower"] = band_df["value"] * 0.90
 
         axis_cfg = dict(
-            labelFont='DM Sans', titleFont='DM Sans',
-            labelColor='#7B82B4', titleColor='#5A5F94',
-            gridColor='#F0F2FA', domainColor='#E0E4F5',
+            labelFont="DM Sans",
+            titleFont="DM Sans",
+            labelColor="#7B82B4",
+            titleColor="#5A5F94",
+            gridColor="#F0F2FA",
+            domainColor="#E0E4F5",
         )
 
-        hist_line = alt.Chart(combined[combined["type"] == "Istoric"]).mark_line(
-            strokeWidth=2.5,
-            point=alt.OverlayMarkDef(filled=True, size=40),
-        ).encode(
-            x=alt.X('timestamp:T', title='Time', axis=alt.Axis(format='%d %b %H:%M', **axis_cfg)),
-            y=alt.Y('value:Q', title=f'{param_label} ({unit})', axis=alt.Axis(**axis_cfg)),
-            color=alt.value('#7C9EFF'),
-            tooltip=[
-                alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'),
-                alt.Tooltip('value:Q', format='.1f', title=param_label),
-            ],
+        hist_line = (
+            alt.Chart(combined[combined["type"] == "Istoric"])
+            .mark_line(
+                strokeWidth=2.5,
+                point=alt.OverlayMarkDef(filled=True, size=40),
+            )
+            .encode(
+                x=alt.X("timestamp:T", title="Time", axis=alt.Axis(format="%d %b %H:%M", **axis_cfg)),
+                y=alt.Y("value:Q", title=f"{param_label} ({unit})", axis=alt.Axis(**axis_cfg)),
+                color=alt.value("#7C9EFF"),
+                tooltip=[
+                    alt.Tooltip("timestamp:T", format="%Y-%m-%d %H:%M"),
+                    alt.Tooltip("value:Q", format=".1f", title=param_label),
+                ],
+            )
         )
 
-
-        fc_line = alt.Chart(combined[combined["type"] == "Predicție"]).mark_line(
-            strokeDash=[6, 4], strokeWidth=2.5,
-            point=alt.OverlayMarkDef(filled=True, size=40),
-        ).encode(
-            x='timestamp:T',
-            y='value:Q',
-            color=alt.value('#F59E0B'),
-            tooltip=[
-                alt.Tooltip('timestamp:T', format='%Y-%m-%d %H:%M'),
-                alt.Tooltip('value:Q', format='.1f', title='Predicție'),
-            ],
+        fc_line = (
+            alt.Chart(combined[combined["type"] == "Predicție"])
+            .mark_line(
+                strokeDash=[6, 4],
+                strokeWidth=2.5,
+                point=alt.OverlayMarkDef(filled=True, size=40),
+            )
+            .encode(
+                x="timestamp:T",
+                y="value:Q",
+                color=alt.value("#F59E0B"),
+                tooltip=[
+                    alt.Tooltip("timestamp:T", format="%Y-%m-%d %H:%M"),
+                    alt.Tooltip("value:Q", format=".1f", title="Predicție"),
+                ],
+            )
         )
 
-        band = alt.Chart(band_df).mark_area(opacity=0.15).encode(
-            x='timestamp:T',
-            y='lower:Q',
-            y2='upper:Q',
-            color=alt.value('#F59E0B'),
+        band = (
+            alt.Chart(band_df)
+            .mark_area(opacity=0.15)
+            .encode(
+                x="timestamp:T",
+                y="lower:Q",
+                y2="upper:Q",
+                color=alt.value("#F59E0B"),
+            )
         )
-
 
         fc_start_ts = fc["timestamp"].min()
         rule_df = pd.DataFrame({"x": [fc_start_ts]})
-        rule = alt.Chart(rule_df).mark_rule(
-            strokeDash=[4, 4], strokeWidth=1.5, color='#A78BFA'
-        ).encode(x='x:T')
+        rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 4], strokeWidth=1.5, color="#A78BFA").encode(x="x:T")
 
-
-        legend_data = pd.DataFrame({
-            "label": ["Istoric", "Predicție XGBoost"],
-            "color": ["#7C9EFF", "#F59E0B"],
-        })
-        legend = alt.Chart(legend_data).mark_point(size=0).encode(
-            color=alt.Color('label:N',
-                scale=alt.Scale(domain=["Istoric", "Predicție XGBoost"],
-                                range=["#7C9EFF", "#F59E0B"]),
-                legend=alt.Legend(title="Tip", titleFont='DM Sans', labelFont='DM Sans',
-                                  titleColor='#5A5F94', labelColor='#2D2F3E')),
+        legend_data = pd.DataFrame(
+            {
+                "label": ["Istoric", "Predicție XGBoost"],
+                "color": ["#7C9EFF", "#F59E0B"],
+            }
+        )
+        legend = (
+            alt.Chart(legend_data)
+            .mark_point(size=0)
+            .encode(
+                color=alt.Color(
+                    "label:N",
+                    scale=alt.Scale(domain=["Istoric", "Predicție XGBoost"], range=["#7C9EFF", "#F59E0B"]),
+                    legend=alt.Legend(
+                        title="Tip",
+                        titleFont="DM Sans",
+                        labelFont="DM Sans",
+                        titleColor="#5A5F94",
+                        labelColor="#2D2F3E",
+                    ),
+                ),
+            )
         )
 
         chart = (
             alt.layer(hist_line, band, fc_line, rule, legend)
             .properties(
                 title=alt.TitleParams(
-                    f'🔮 Forecast {param_label} — următoarele {len(fc)} ore',
-                    font='DM Sans', fontSize=15, fontWeight=600,
-                    color='#2D2F3E', anchor='start', offset=8,
+                    f"🔮 Forecast {param_label} — următoarele {len(fc)} ore",
+                    font="DM Sans",
+                    fontSize=15,
+                    fontWeight=600,
+                    color="#2D2F3E",
+                    anchor="start",
+                    offset=8,
                 ),
                 height=400,
-                width='container',
-                background='#FFFFFF',
+                width="container",
+                background="#FFFFFF",
             )
             .configure_view(strokeWidth=0)
             .interactive()
@@ -777,8 +840,8 @@ def render_dashboard_page():
                     pn.pane.HTML(
                         '<div style="text-align:center;padding:30px;color:#EF4444;'
                         'font-family:DM Sans,sans-serif;">'
-                        '⚠️ Nu există date încărcate. Selectează locații și un interval de date mai întâi.</div>',
-                        sizing_mode='stretch_width',
+                        "⚠️ Nu există date încărcate. Selectează locații și un interval de date mai întâi.</div>",
+                        sizing_mode="stretch_width",
                     )
                 ]
                 return
@@ -804,18 +867,17 @@ def render_dashboard_page():
                     pn.pane.HTML(
                         '<div style="text-align:center;padding:30px;color:#F59E0B;'
                         'font-family:DM Sans,sans-serif;">'
-                        '⚠️ Date insuficiente pentru forecast. Te rugăm să selectezi un interval de <b>minim 2-3 zile</b> de istoric din selectorul de date.</div>',
-                        sizing_mode='stretch_width',
+                        "⚠️ Date insuficiente pentru forecast. Te rugăm să selectezi un interval de <b>minim 2-3 zile</b> de istoric din selectorul de date.</div>",
+                        sizing_mode="stretch_width",
                     )
                 ]
                 return
 
             chart = _build_forecast_chart(df_api_data, fc_df, param_col, param_label, unit)
 
-     
             fc_mean = fc_df["forecast"].mean()
-            fc_min  = fc_df["forecast"].min()
-            fc_max  = fc_df["forecast"].max()
+            fc_min = fc_df["forecast"].min()
+            fc_max = fc_df["forecast"].max()
             stats_html = f"""
             <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-family:'DM Sans',sans-serif;">
                 <div style="flex:1; min-width:140px; background:#F5F3FF; border-radius:12px;
@@ -837,8 +899,8 @@ def render_dashboard_page():
             """
 
             forecast_container.objects = [
-                pn.pane.Vega(chart, sizing_mode='stretch_width'),
-                pn.pane.HTML(stats_html, sizing_mode='stretch_width'),
+                pn.pane.Vega(chart, sizing_mode="stretch_width"),
+                pn.pane.HTML(stats_html, sizing_mode="stretch_width"),
             ]
 
         except Exception as e:
@@ -846,8 +908,8 @@ def render_dashboard_page():
                 pn.pane.HTML(
                     f'<div style="text-align:center;padding:30px;color:#EF4444;'
                     f'font-family:DM Sans,sans-serif;">'
-                    f'❌ Eroare la generarea forecast-ului: {e}</div>',
-                    sizing_mode='stretch_width',
+                    f"❌ Eroare la generarea forecast-ului: {e}</div>",
+                    sizing_mode="stretch_width",
                 )
             ]
         finally:
@@ -867,25 +929,25 @@ def render_dashboard_page():
         pn.Row(
             forecast_hours_slider,
             forecast_btn,
-            sizing_mode='stretch_width',
-            styles={'gap': '20px', 'align-items': 'flex-end', 'flex-wrap': 'wrap'},
+            sizing_mode="stretch_width",
+            styles={"gap": "20px", "align-items": "flex-end", "flex-wrap": "wrap"},
         ),
         pn.layout.Divider(),
         forecast_container,
         styles=forecast_card_style,
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
-  
     pn.config.raw_css.append(chat_bubble_css)
 
     chat_agent = ChatAgent()
 
     chat_input = pn.widgets.TextInput(
-        name='',
-        placeholder='Pune o întrebare despre datele din senzori...',
-        sizing_mode='stretch_width',
-        stylesheets=["""
+        name="",
+        placeholder="Pune o întrebare despre datele din senzori...",
+        sizing_mode="stretch_width",
+        stylesheets=[
+            """
         :host { font-family: 'DM Sans', sans-serif !important; }
         .bk-input {
             font-family: 'DM Sans', sans-serif !important;
@@ -902,14 +964,16 @@ def render_dashboard_page():
             background: #fff !important;
             box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15) !important;
         }
-        """],
+        """
+        ],
     )
 
     chat_send_btn = pn.widgets.Button(
-        name='Trimite',
-        button_type='primary',
+        name="Trimite",
+        button_type="primary",
         width=120,
-        stylesheets=["""
+        stylesheets=[
+            """
         :host button {
             font-family: 'DM Sans', sans-serif !important;
             font-size: 13px !important;
@@ -924,14 +988,16 @@ def render_dashboard_page():
             box-shadow: 0 4px 14px rgba(52, 211, 153, 0.3) !important;
         }
         :host button:hover { opacity: 0.88 !important; }
-        """],
+        """
+        ],
     )
 
     chat_reset_btn = pn.widgets.Button(
-        name='🗑',
-        button_type='light',
+        name="🗑",
+        button_type="light",
         width=44,
-        stylesheets=["""
+        stylesheets=[
+            """
         :host button {
             font-family: 'DM Sans', sans-serif !important;
             font-size: 16px !important;
@@ -948,7 +1014,8 @@ def render_dashboard_page():
             background: #FEF2F2 !important;
             color: #EF4444 !important;
         }
-        """],
+        """
+        ],
     )
 
     welcome_html = """
@@ -965,7 +1032,7 @@ def render_dashboard_page():
 
     chat_history_pane = pn.pane.HTML(
         welcome_html,
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
     def _render_chat_history(history):
@@ -977,18 +1044,22 @@ def render_dashboard_page():
         for msg in history:
             role = msg["role"]
             content = msg["content"]
-     
+
             content = content.replace("\n", "<br>")
             import re
-            content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', content)
 
-            content = re.sub(r'`([^`]+)`', r'<code style="background:#E0E4F5;padding:2px 6px;border-radius:4px;font-size:12px;">\1</code>', content)
+            content = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", content)
+
+            content = re.sub(
+                r"`([^`]+)`",
+                r'<code style="background:#E0E4F5;padding:2px 6px;border-radius:4px;font-size:12px;">\1</code>',
+                content,
+            )
 
             css_class = "user" if role == "user" else "assistant"
             html += f'<div class="chat-bubble {css_class}">{content}</div>'
-        html += '</div>'
+        html += "</div>"
 
-    
         html += """
         <script>
             setTimeout(function() {
@@ -1004,24 +1075,20 @@ def render_dashboard_page():
         if not question:
             return
 
-
         chat_agent.history.append({"role": "user", "content": question})
 
         chat_agent.history.pop()
 
-        chat_input.value = ''
+        chat_input.value = ""
 
-      
         loading_html = _render_chat_history(chat_agent.get_history() + [{"role": "user", "content": question}])
         loading_html = loading_html.replace(
-            '</div>\n        <script>',
-            '<div class="chat-loading"><span></span><span></span><span></span></div></div>\n        <script>'
+            "</div>\n        <script>",
+            '<div class="chat-loading"><span></span><span></span><span></span></div></div>\n        <script>',
         )
         chat_history_pane.object = loading_html
 
-
         answer = chat_agent.ask(question)
-
 
         chat_history_pane.object = _render_chat_history(chat_agent.get_history())
 
@@ -1029,8 +1096,9 @@ def render_dashboard_page():
         chat_agent.reset()
         chat_history_pane.object = welcome_html
 
-
-    chat_input.param.watch(lambda event: _on_chat_send(event) if event.new and event.new.endswith('\n') else None, 'value')
+    chat_input.param.watch(
+        lambda event: _on_chat_send(event) if event.new and event.new.endswith("\n") else None, "value"
+    )
     chat_send_btn.on_click(_on_chat_send)
     chat_reset_btn.on_click(_on_chat_reset)
 
@@ -1042,8 +1110,8 @@ def render_dashboard_page():
             ),
             pn.Spacer(),
             chat_reset_btn,
-            sizing_mode='stretch_width',
-            styles={'align-items': 'center'},
+            sizing_mode="stretch_width",
+            styles={"align-items": "center"},
         ),
         pn.pane.Markdown(
             "Pune întrebări în limbaj natural despre datele din senzori. AI-ul generează interogări SQL automat.",
@@ -1054,16 +1122,14 @@ def render_dashboard_page():
         pn.Row(
             chat_input,
             chat_send_btn,
-            sizing_mode='stretch_width',
-            styles={'gap': '10px', 'align-items': 'flex-end', 'margin-top': '12px'},
+            sizing_mode="stretch_width",
+            styles={"gap": "10px", "align-items": "flex-end", "margin-top": "12px"},
         ),
         styles=chat_card_style,
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
-
     header = pn.pane.Markdown(
-
         styles={
             "font-family": "'DM Sans', sans-serif",
             "color": "#2D2F3E",
@@ -1071,7 +1137,7 @@ def render_dashboard_page():
             "padding-bottom": "16px",
             "margin-bottom": "20px",
         },
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
     )
 
     layout = pn.Column(
@@ -1084,7 +1150,7 @@ def render_dashboard_page():
         # report_card,
         forecast_card,
         chat_card,
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
         styles={
             "max-width": "1280px",
             "margin": "0 auto",
@@ -1096,18 +1162,18 @@ def render_dashboard_page():
     return layout
 
 
-
 def render_admin_page():
-    pn.extension('tabulator')
+    pn.extension("tabulator")
     pn.config.raw_css.append(FONT_IMPORT + global_style)
 
-    upload_widget = pn.widgets.FileInput(accept='.xlsx', name='Upload Excel')
+    upload_widget = pn.widgets.FileInput(accept=".xlsx", name="Upload Excel")
 
     admin_btn = pn.widgets.Button(
-        name='← Back to Dashboard',
-        button_type='light',
+        name="← Back to Dashboard",
+        button_type="light",
         width=180,
-        stylesheets=["""
+        stylesheets=[
+            """
         :host button {
             font-family: 'DM Sans', sans-serif !important;
             font-size: 13px !important;
@@ -1123,7 +1189,8 @@ def render_admin_page():
         :host button:hover {
             background: #EEF0FF !important;
         }
-        """],
+        """
+        ],
     )
     admin_btn.js_on_click(code="window.location.href = '/dashboard'")
 
@@ -1136,13 +1203,15 @@ def render_admin_page():
             )
         try:
             import io
+
             df = pd.read_excel(io.BytesIO(file_content))
             return pn.widgets.Tabulator(
                 df,
-                pagination='remote',
+                pagination="remote",
                 page_size=10,
                 height=400,
-                stylesheets=["""
+                stylesheets=[
+                    """
                 .tabulator {
                     font-family: 'DM Mono', monospace !important;
                     font-size: 13px !important;
@@ -1169,10 +1238,11 @@ def render_admin_page():
                 .tabulator-row:hover {
                     background: #F7F8FF !important;
                 }
-                """],
+                """
+                ],
             )
         except Exception as e:
-            return pn.pane.Alert(f"Error reading file: {str(e)}", alert_type='danger')
+            return pn.pane.Alert(f"Error reading file: {str(e)}", alert_type="danger")
 
     layout = pn.Column(
         pn.pane.Markdown(
@@ -1186,9 +1256,9 @@ def render_admin_page():
             pn.layout.Divider(),
             process_excel,
             styles=card_style,
-            sizing_mode='stretch_width',
+            sizing_mode="stretch_width",
         ),
-        sizing_mode='stretch_width',
+        sizing_mode="stretch_width",
         styles={"max-width": "960px", "margin": "0 auto", "padding": "32px 20px", "background": "#F7F8FC"},
     )
 

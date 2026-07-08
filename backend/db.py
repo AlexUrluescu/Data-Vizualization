@@ -83,7 +83,6 @@ def init_db():
             )
         """)
 
-
         conn.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,10 +96,7 @@ def init_db():
             )
         """)
 
-        existing_cols = {
-            row[1]
-            for row in conn.execute("PRAGMA table_info(api_keys)").fetchall()
-        }
+        existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(api_keys)").fetchall()}
         if "owner_username" not in existing_cols:
             conn.execute("ALTER TABLE api_keys ADD COLUMN owner_username TEXT")
 
@@ -120,17 +116,19 @@ def init_db():
             print("[db] Default admin created — username: admin / password: admin1234")
 
 
-
 def mark_range_fetched(device_id: str, start_dt: datetime, end_dt: datetime):
     with get_conn() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO fetched_ranges (device_id, range_start, range_end)
             VALUES (?, ?, ?)
-        """, [
-            device_id,
-            start_dt.isoformat().replace("T", " "),
-            end_dt.isoformat().replace("T", " "),
-        ])
+        """,
+            [
+                device_id,
+                start_dt.isoformat().replace("T", " "),
+                end_dt.isoformat().replace("T", " "),
+            ],
+        )
 
 
 def is_range_fetched(device_id: str, start_dt: datetime, end_dt: datetime) -> bool:
@@ -141,11 +139,14 @@ def is_range_fetched(device_id: str, start_dt: datetime, end_dt: datetime) -> bo
           AND range_end   >= ?
     """
     with get_conn() as conn:
-        cursor = conn.execute(sql, [
-            device_id,
-            start_dt.isoformat().replace("T", " "),
-            end_dt.isoformat().replace("T", " "),
-        ])
+        cursor = conn.execute(
+            sql,
+            [
+                device_id,
+                start_dt.isoformat().replace("T", " "),
+                end_dt.isoformat().replace("T", " "),
+            ],
+        )
         return cursor.fetchone()[0] > 0
 
 
@@ -159,7 +160,8 @@ def get_cached_range(device_id: str, start_dt: datetime, end_dt: datetime) -> pd
     """
     with get_conn() as conn:
         df = pd.read_sql_query(
-            sql, conn,
+            sql,
+            conn,
             params=[device_id, start_dt.isoformat(), end_dt.isoformat()],
             parse_dates=["timestamp"],
         )
@@ -210,7 +212,6 @@ def save_to_db(df: pd.DataFrame, device_id: str, location: str):
         conn.executemany(sql, rows)
 
 
-
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -222,8 +223,8 @@ def _generate_api_credentials() -> tuple[str, str]:
     user_id   : 12-char uppercase hex  e.g. "A3F9C2D10B4E"
     user_hash : 48-char lowercase hex  e.g. "9f3a...c2b1"
     """
-    user_id   = secrets.token_hex(6).upper()          
-    user_hash = secrets.token_hex(24)               
+    user_id = secrets.token_hex(6).upper()
+    user_hash = secrets.token_hex(24)
     return user_id, user_hash
 
 
@@ -246,11 +247,9 @@ def _create_api_key_for_user_conn(conn, username: str, now: str | None = None):
     Skips if the user already has a key (idempotent).
     """
     now = now or datetime.utcnow().isoformat()
-    existing = conn.execute(
-        "SELECT id FROM api_keys WHERE owner_username=?", (username,)
-    ).fetchone()
+    existing = conn.execute("SELECT id FROM api_keys WHERE owner_username=?", (username,)).fetchone()
     if existing:
-        return 
+        return
 
     api_url = os.getenv("API_URL", "https://api.example.com/data")
     user_id, user_hash = _generate_api_credentials()
@@ -309,9 +308,7 @@ def update_user_password(user_id: int, new_password: str):
 
 def list_users() -> list[dict]:
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT id, username, role, created_at, is_active FROM users ORDER BY id"
-        ).fetchall()
+        rows = conn.execute("SELECT id, username, role, created_at, is_active FROM users ORDER BY id").fetchall()
     return [dict(r) for r in rows]
 
 
@@ -325,17 +322,18 @@ def update_user_role(user_id: int, role: str):
         conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
 
 
-
-def upsert_sensor(sensor_id: str, name: str, lat: float, lon: float,
-                  location: str = "", is_active: bool = True):
+def upsert_sensor(sensor_id: str, name: str, lat: float, lon: float, location: str = "", is_active: bool = True):
     with get_conn() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO sensors (id, name, lat, lon, location, is_active, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name=excluded.name, lat=excluded.lat, lon=excluded.lon,
                 location=excluded.location, is_active=excluded.is_active
-        """, (sensor_id, name, lat, lon, location, int(is_active), datetime.utcnow().isoformat()))
+        """,
+            (sensor_id, name, lat, lon, location, int(is_active), datetime.utcnow().isoformat()),
+        )
 
 
 def list_sensors() -> list[dict]:
@@ -354,18 +352,20 @@ def activate_sensor(sensor_id: str):
         conn.execute("UPDATE sensors SET is_active=1 WHERE id=?", (sensor_id,))
 
 
-def add_api_key(label: str, user_id: str, user_hash: str, api_url: str,
-                owner_username: str | None = None):
+def add_api_key(label: str, user_id: str, user_hash: str, api_url: str, owner_username: str | None = None):
     """
     Manually add an API key (admin use).
     `owner_username` links the key to a specific app user so it appears
     on their /settings page.  Leave None for a shared / unowned key.
     """
     with get_conn() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO api_keys (label, owner_username, user_id, user_hash, api_url, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (label, owner_username, user_id, user_hash, api_url, datetime.utcnow().isoformat()))
+        """,
+            (label, owner_username, user_id, user_hash, api_url, datetime.utcnow().isoformat()),
+        )
 
 
 def get_user_api_keys(username: str) -> list[dict]:
@@ -400,20 +400,21 @@ def delete_api_key(key_id: int):
 
 def set_config(key: str, value: str, description: str = ""):
     with get_conn() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO app_configs (key, value, description, updated_at)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(key) DO UPDATE SET
                 value=excluded.value,
                 updated_at=excluded.updated_at
-        """, (key, value, description, datetime.utcnow().isoformat()))
+        """,
+            (key, value, description, datetime.utcnow().isoformat()),
+        )
 
 
 def get_config(key: str, default=None):
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT value FROM app_configs WHERE key=?", (key,)
-        ).fetchone()
+        row = conn.execute("SELECT value FROM app_configs WHERE key=?", (key,)).fetchone()
     return row["value"] if row else default
 
 

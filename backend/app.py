@@ -6,13 +6,13 @@ from tornado.wsgi import WSGIContainer
 from tornado.web import FallbackHandler, RequestHandler
 from flask_apscheduler import APScheduler
 
-from configs.routes.v1.render_home  import render_home_page
+from configs.routes.v1.render_home import render_home_page
 from configs.routes.v1.render_admin import render_admin_page
-from configs.routes.v1.data_ingest  import data_ingest_bp
+from configs.routes.v1.data_ingest import data_ingest_bp
 
-from frontend.panel_app      import render_dashboard_page
-from frontend.admin          import render_admin_page as panel_admin_page
-from frontend.user_settings  import render_settings_page
+from frontend.panel_app import render_dashboard_page
+from frontend.admin import render_admin_page as panel_admin_page
+from frontend.user_settings import render_settings_page
 from auth import login, _sessions, COOKIE_NAME, COOKIE_MAX_AGE
 
 
@@ -135,7 +135,8 @@ class LoginHandler(RequestHandler):
         user, token = login(username, password)
         if user and token:
             self.set_cookie(
-                COOKIE_NAME, token,
+                COOKIE_NAME,
+                token,
                 max_age=COOKIE_MAX_AGE,
                 path="/",
                 httponly=True,
@@ -145,6 +146,7 @@ class LoginHandler(RequestHandler):
         else:
             error = '<div class="error">⚠ Invalid username or password.</div>'
             self.finish(LOGIN_HTML.replace("{error_block}", error))
+
 
 class LogoutHandler(RequestHandler):
     def get(self):
@@ -160,7 +162,7 @@ class LogoutHandler(RequestHandler):
 def create_flask_app():
     app = Flask(__name__)
 
-    app.config["SCHEDULER_API_ENABLED"]  = False
+    app.config["SCHEDULER_API_ENABLED"] = False
     app.config["SCHEDULER_JOB_DEFAULTS"] = {"coalesce": True, "max_instances": 1}
 
     scheduler = APScheduler()
@@ -174,15 +176,14 @@ def create_flask_app():
     scheduler.init_app(app)
     scheduler.start()
 
-    app.register_blueprint(render_home_page,  url_prefix="/")
+    app.register_blueprint(render_home_page, url_prefix="/")
     app.register_blueprint(render_admin_page, url_prefix="/admin")
-    app.register_blueprint(data_ingest_bp,    url_prefix="/api/v1")
+    app.register_blueprint(data_ingest_bp, url_prefix="/api/v1")
 
     return app
 
 
 flask_app = create_flask_app()
-
 
 
 def run_server():
@@ -191,9 +192,9 @@ def run_server():
 
     server = pn.serve(
         {
-            "/dashboard":   render_dashboard_page,
+            "/dashboard": render_dashboard_page,
             "/admin-panel": panel_admin_page,
-            "/settings":    render_settings_page,
+            "/settings": render_settings_page,
         },
         port=port,
         address="0.0.0.0",
@@ -202,17 +203,20 @@ def run_server():
         start=False,
     )
 
-    tornado_app    = server._tornado
+    tornado_app = server._tornado
     wsgi_container = WSGIContainer(flask_app)
 
     PANEL_PREFIXES = ["/dashboard", "/admin-panel", "/settings", "/static", "/_root_"]
     exclusion = "|".join(PANEL_PREFIXES)
 
-    tornado_app.add_handlers(r".*", [
-        (r"^/login$",  LoginHandler),
-        (r"^/logout$", LogoutHandler),
-        (rf"^(?!{exclusion}).*", FallbackHandler, dict(fallback=wsgi_container)),
-    ])
+    tornado_app.add_handlers(
+        r".*",
+        [
+            (r"^/login$", LoginHandler),
+            (r"^/logout$", LogoutHandler),
+            (rf"^(?!{exclusion}).*", FallbackHandler, dict(fallback=wsgi_container)),
+        ],
+    )
 
     server.start()
     server.io_loop.start()

@@ -26,7 +26,7 @@ Authentication:
     All requests must include the correct API headers:
         X-User-id:   <user_id stored in api_keys>
         X-User-hash: <user_hash stored in api_keys>
-    
+
     The endpoint validates these against the api_keys table.
 """
 
@@ -44,17 +44,14 @@ def _authenticate(req) -> tuple[bool, str]:
     Validates X-User-id / X-User-hash headers against active api_keys rows.
     Returns (ok: bool, error_message: str).
     """
-    uid   = req.headers.get("X-User-id",   "").strip()
+    uid = req.headers.get("X-User-id", "").strip()
     uhash = req.headers.get("X-User-hash", "").strip()
 
     if not uid or not uhash:
         return False, "Missing X-User-id or X-User-hash header."
 
     active_keys = [k for k in list_api_keys() if k.get("is_active")]
-    matched = any(
-        k["user_id"] == uid and k["user_hash"] == uhash
-        for k in active_keys
-    )
+    matched = any(k["user_id"] == uid and k["user_hash"] == uhash for k in active_keys)
     if not matched:
         return False, "Invalid or inactive API credentials."
 
@@ -62,7 +59,7 @@ def _authenticate(req) -> tuple[bool, str]:
 
 
 REQUIRED_FIELDS = {"device_id", "location"}
-NUMERIC_FIELDS  = ("temperature", "pressure", "humidity", "pm1", "pm25", "pm10")
+NUMERIC_FIELDS = ("temperature", "pressure", "humidity", "pm1", "pm25", "pm10")
 
 
 def _parse_record(raw: dict) -> tuple[dict | None, str]:
@@ -72,7 +69,7 @@ def _parse_record(raw: dict) -> tuple[dict | None, str]:
 
     record = {
         "device_id": str(raw["device_id"]).strip(),
-        "location":  str(raw["location"]).strip(),
+        "location": str(raw["location"]).strip(),
     }
 
     ts_raw = raw.get("timestamp")
@@ -99,10 +96,8 @@ def _parse_record(raw: dict) -> tuple[dict | None, str]:
     return record, ""
 
 
-
 @data_ingest_bp.route("/data", methods=["POST"])
 def ingest_data():
-
     ok, err = _authenticate(request)
     if not ok:
         return jsonify({"ok": False, "error": err}), 401
@@ -118,7 +113,6 @@ def ingest_data():
     if not raw_list:
         return jsonify({"ok": False, "error": "Empty data array."}), 400
 
-   
     records, errors = [], []
     for i, raw in enumerate(raw_list):
         record, err = _parse_record(raw)
@@ -127,13 +121,14 @@ def ingest_data():
         else:
             records.append(record)
 
-  
     if errors:
-        return jsonify({
-            "ok":     False,
-            "error":  "Validation failed for one or more records.",
-            "detail": errors,
-        }), 422
+        return jsonify(
+            {
+                "ok": False,
+                "error": "Validation failed for one or more records.",
+                "detail": errors,
+            }
+        ), 422
 
     df_all = pd.DataFrame(records)
     df_all["timestamp"] = pd.to_datetime(df_all["timestamp"])
@@ -143,12 +138,13 @@ def ingest_data():
         save_to_db(group.reset_index(drop=True), device_id=device_id, location=location)
         inserted += len(group)
 
-    return jsonify({
-        "ok":       True,
-        "inserted": inserted,
-        "skipped":  len(raw_list) - inserted,
-    }), 201
-
+    return jsonify(
+        {
+            "ok": True,
+            "inserted": inserted,
+            "skipped": len(raw_list) - inserted,
+        }
+    ), 201
 
 
 @data_ingest_bp.route("/data/health", methods=["GET"])

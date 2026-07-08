@@ -13,15 +13,20 @@ GLOBAL_CSS = """
 body { font-family: 'DM Sans', sans-serif !important; background: #F7F8FC !important; }
 """
 CARD = {
-    "background": "#FFFFFF", "border-radius": "16px",
+    "background": "#FFFFFF",
+    "border-radius": "16px",
     "box-shadow": "0 2px 24px rgba(75,81,160,0.07)",
-    "padding": "28px 32px", "margin-bottom": "20px",
+    "padding": "28px 32px",
+    "margin-bottom": "20px",
 }
 SECTION_TITLE = {"font-family": "'DM Sans', sans-serif", "color": "#2D2F3E", "margin-bottom": "4px"}
 SUBLABEL = {
-    "font-family": "'DM Sans', sans-serif", "font-size": "11px",
-    "text-transform": "uppercase", "letter-spacing": "0.07em",
-    "color": "#5A5F94", "margin-bottom": "4px",
+    "font-family": "'DM Sans', sans-serif",
+    "font-size": "11px",
+    "text-transform": "uppercase",
+    "letter-spacing": "0.07em",
+    "color": "#5A5F94",
+    "margin-bottom": "4px",
 }
 INPUT_CSS = """
 :host input {
@@ -68,11 +73,13 @@ SETTINGS_JS = """
 
 
 def _btn(label, bg="#6366F1", fg="#fff", width=None):
-    css = (f":host button {{font-family:'DM Sans',sans-serif!important;"
-           f"font-size:13px!important;font-weight:600!important;border-radius:8px!important;"
-           f"background:{bg}!important;color:{fg}!important;border:1.5px solid {bg}!important;"
-           f"padding:7px 18px!important;cursor:pointer!important;transition:opacity .15s!important;}}"
-           f":host button:hover{{opacity:.82!important;}}")
+    css = (
+        f":host button {{font-family:'DM Sans',sans-serif!important;"
+        f"font-size:13px!important;font-weight:600!important;border-radius:8px!important;"
+        f"background:{bg}!important;color:{fg}!important;border:1.5px solid {bg}!important;"
+        f"padding:7px 18px!important;cursor:pointer!important;transition:opacity .15s!important;}}"
+        f":host button:hover{{opacity:.82!important;}}"
+    )
     kw = {"name": label, "button_type": "light", "stylesheets": [css]}
     if width:
         kw["width"] = width
@@ -84,8 +91,10 @@ def _lbl(text):
 
 
 def _notice():
-    return pn.pane.Markdown("", styles={"color": "#22C55E", "font-size": "13px",
-                                        "font-family": "'DM Sans',sans-serif", "min-height": "20px"})
+    return pn.pane.Markdown(
+        "",
+        styles={"color": "#22C55E", "font-size": "13px", "font-family": "'DM Sans',sans-serif", "min-height": "20px"},
+    )
 
 
 def _ok(n, msg):
@@ -99,16 +108,16 @@ def _err(n, msg):
 
 
 def _credential_card(key: dict) -> pn.pane.HTML:
-    uid   = key.get("user_id",   "—")
+    uid = key.get("user_id", "—")
     uhash = key.get("user_hash", "—")
-    url   = "https://data-vizualization-5rxh.onrender.com/api/v1/data"
+    url = "https://data-vizualization-5rxh.onrender.com/api/v1/data"
     label = key.get("label", "API Key")
 
     active_badge = (
         '<span style="background:#D1FAE5;color:#065F46;border-radius:20px;'
         'padding:2px 10px;font-size:11px;font-weight:600;">● Active</span>'
-        if key.get("is_active") else
-        '<span style="background:#FEE2E2;color:#991B1B;border-radius:20px;'
+        if key.get("is_active")
+        else '<span style="background:#FEE2E2;color:#991B1B;border-radius:20px;'
         'padding:2px 10px;font-size:11px;font-weight:600;">○ Inactive</span>'
     )
 
@@ -116,9 +125,11 @@ def _credential_card(key: dict) -> pn.pane.HTML:
         return v.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
 
     def _copy_btn(value, icon="⎘"):
-        return (f'<button onclick="window.copyText(\'{_sq(value)}\',this)" '
-                f'style="background:#EEF0FF;border:none;border-radius:6px;padding:4px 10px;'
-                f'cursor:pointer;font-size:14px;color:#4B51A0;flex-shrink:0;">{icon}</button>')
+        return (
+            f"<button onclick=\"window.copyText('{_sq(value)}',this)\" "
+            f'style="background:#EEF0FF;border:none;border-radius:6px;padding:4px 10px;'
+            f'cursor:pointer;font-size:14px;color:#4B51A0;flex-shrink:0;">{icon}</button>'
+        )
 
     html = f"""
 <div style="background:#fff;border-radius:14px;border:1.5px solid #EEF0FA;
@@ -168,8 +179,8 @@ def _credential_card(key: dict) -> pn.pane.HTML:
 
 
 def _profile_card(user: dict) -> pn.pane.HTML:
-    role       = user.get("role", "viewer")
-    username   = user.get("username", "—")
+    role = user.get("role", "viewer")
+    username = user.get("username", "—")
     created_at = user.get("created_at", "")
 
     if created_at:
@@ -207,10 +218,16 @@ def _profile_card(user: dict) -> pn.pane.HTML:
 
 
 def _change_password_card(user: dict) -> pn.Column:
-    n       = _notice()
-    old_pw  = pn.widgets.PasswordInput(placeholder="Current password",            sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    new_pw  = pn.widgets.PasswordInput(placeholder="New password (min. 8 chars)", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    conf_pw = pn.widgets.PasswordInput(placeholder="Confirm new password",         sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    n = _notice()
+    old_pw = pn.widgets.PasswordInput(
+        placeholder="Current password", sizing_mode="stretch_width", stylesheets=[INPUT_CSS]
+    )
+    new_pw = pn.widgets.PasswordInput(
+        placeholder="New password (min. 8 chars)", sizing_mode="stretch_width", stylesheets=[INPUT_CSS]
+    )
+    conf_pw = pn.widgets.PasswordInput(
+        placeholder="Confirm new password", sizing_mode="stretch_width", stylesheets=[INPUT_CSS]
+    )
     save_btn = _btn("💾 Update Password")
 
     def on_save(e):
@@ -233,10 +250,11 @@ def _change_password_card(user: dict) -> pn.Column:
         pn.pane.Markdown("## 🔒 Change Password", styles=SECTION_TITLE),
         pn.layout.Divider(),
         pn.Row(
-            pn.Column(_lbl("Current Password"), old_pw,  sizing_mode="stretch_width"),
-            pn.Column(_lbl("New Password"),     new_pw,  sizing_mode="stretch_width"),
-            pn.Column(_lbl("Confirm"),          conf_pw, sizing_mode="stretch_width"),
-            sizing_mode="stretch_width", styles={"gap": "14px"},
+            pn.Column(_lbl("Current Password"), old_pw, sizing_mode="stretch_width"),
+            pn.Column(_lbl("New Password"), new_pw, sizing_mode="stretch_width"),
+            pn.Column(_lbl("Confirm"), conf_pw, sizing_mode="stretch_width"),
+            sizing_mode="stretch_width",
+            styles={"gap": "14px"},
         ),
         pn.Row(save_btn, n, styles={"align-items": "center", "gap": "16px", "margin-top": "4px"}),
         sizing_mode="stretch_width",
@@ -252,7 +270,9 @@ def render_settings_page() -> pn.viewable.Viewable:
     if user is None:
         return pn.pane.HTML(
             '<script>window.location.href = "/login";</script>',
-            width=0, height=0, margin=0,
+            width=0,
+            height=0,
+            margin=0,
         )
 
     return _build_settings(user)
@@ -269,13 +289,16 @@ def _build_settings(user: dict) -> pn.Column:
             )
         ] + [_credential_card(k) for k in user_keys]
     else:
-        cred_items = [pn.pane.HTML(
-            '<div style="text-align:center;padding:48px 0;color:#7B82B4;font-family:\'DM Sans\',sans-serif;">'
-            '<div style="font-size:36px;margin-bottom:12px;">🔑</div>'
-            '<div style="font-size:15px;font-weight:600;color:#4B51A0;">No API credentials assigned yet</div>'
-            '<div style="font-size:13px;margin-top:6px;">Contact an admin to get your credentials added.</div>'
-            '</div>', sizing_mode="stretch_width"
-        )]
+        cred_items = [
+            pn.pane.HTML(
+                "<div style=\"text-align:center;padding:48px 0;color:#7B82B4;font-family:'DM Sans',sans-serif;\">"
+                '<div style="font-size:36px;margin-bottom:12px;">🔑</div>'
+                '<div style="font-size:15px;font-weight:600;color:#4B51A0;">No API credentials assigned yet</div>'
+                '<div style="font-size:13px;margin-top:6px;">Contact an admin to get your credentials added.</div>'
+                "</div>",
+                sizing_mode="stretch_width",
+            )
+        ]
 
     credentials_card = pn.Column(
         pn.pane.Markdown("## 🌐 API Credentials", styles=SECTION_TITLE),

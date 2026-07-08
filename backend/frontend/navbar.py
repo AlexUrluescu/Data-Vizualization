@@ -2,8 +2,7 @@ import panel as pn
 from auth import current_user
 
 FONT_IMPORT = (
-    "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700"
-    "&family=DM+Mono&display=swap');"
+    "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Mono&display=swap');"
 )
 
 
@@ -11,7 +10,8 @@ def _nav_btn(label: str, href: str, active: bool = False):
     btn = pn.widgets.Button(
         name=label,
         button_type="light",
-        stylesheets=[f"""
+        stylesheets=[
+            f"""
         :host button {{
             font-family: 'DM Sans', sans-serif !important;
             font-size: 13px !important;
@@ -29,7 +29,8 @@ def _nav_btn(label: str, href: str, active: bool = False):
             color: #4B51A0 !important;
             border-color: #C7D2FE !important;
         }}
-        """],
+        """
+        ],
     )
     btn.js_on_click(code=f"window.location.href = '{href}'")
     return btn
@@ -62,13 +63,9 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
     ]
 
     if user:
-        nav_items.append(
-            _nav_btn("⚙ Settings", "/settings", active=(active == "settings"))
-        )
+        nav_items.append(_nav_btn("⚙ Settings", "/settings", active=(active == "settings")))
         if user.get("role") == "admin":
-            nav_items.append(
-                _nav_btn("🛠 Admin", "/admin-panel", active=(active == "admin"))
-            )
+            nav_items.append(_nav_btn("🛠 Admin", "/admin-panel", active=(active == "admin")))
 
     nav_links = pn.Row(
         *nav_items,
@@ -94,7 +91,8 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
         logout_btn = pn.widgets.Button(
             name="Sign out",
             button_type="light",
-            stylesheets=["""
+            stylesheets=[
+                """
             :host button {
                 font-family: 'DM Sans', sans-serif !important;
                 font-size: 12px !important; font-weight: 600 !important;
@@ -104,7 +102,8 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
                 padding: 6px 14px !important; cursor: pointer !important;
             }
             :host button:hover { background: #FEE2E2 !important; }
-            """],
+            """
+            ],
         )
         logout_btn.js_on_click(code="window.location.href = '/logout';")
 
