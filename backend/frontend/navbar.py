@@ -58,7 +58,7 @@ def render_navbar(active: str = "dashboard", title: str = "") -> pn.Row:
     )
 
     nav_items = [
-        _nav_btn("📊 Dashboard", "/", active=(active == "dashboard")),
+        _nav_btn("📊 Dashboard", "/dashboard", active=(active == "dashboard")),
     ]
 
     if user:

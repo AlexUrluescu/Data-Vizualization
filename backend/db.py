@@ -9,10 +9,6 @@ from contextlib import contextmanager
 DB_PATH = os.getenv("DB_PATH", "air_quality.db")
 
 
-# ══════════════════════════════════════════════════════════════
-# Connection
-# ══════════════════════════════════════════════════════════════
-
 @contextmanager
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -28,10 +24,6 @@ def get_conn():
     finally:
         conn.close()
 
-
-# ══════════════════════════════════════════════════════════════
-# Init
-# ══════════════════════════════════════════════════════════════
 
 def init_db():
     with get_conn() as conn:
@@ -91,8 +83,7 @@ def init_db():
             )
         """)
 
-        # api_keys now has owner_username to link each key to an app user.
-        # user_id / user_hash are the credentials sent in API request headers.
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,7 +97,6 @@ def init_db():
             )
         """)
 
-        # ── Migrate existing api_keys tables that lack owner_username ─────────
         existing_cols = {
             row[1]
             for row in conn.execute("PRAGMA table_info(api_keys)").fetchall()
@@ -123,7 +113,6 @@ def init_db():
             )
         """)
 
-    # Seed default admin
     with get_conn() as conn:
         row = conn.execute("SELECT COUNT(*) FROM users").fetchone()
         if row[0] == 0:
@@ -131,9 +120,6 @@ def init_db():
             print("[db] Default admin created — username: admin / password: admin1234")
 
 
-# ══════════════════════════════════════════════════════════════
-# Sensor data helpers
-# ══════════════════════════════════════════════════════════════
 
 def mark_range_fetched(device_id: str, start_dt: datetime, end_dt: datetime):
     with get_conn() as conn:
@@ -224,9 +210,6 @@ def save_to_db(df: pd.DataFrame, device_id: str, location: str):
         conn.executemany(sql, rows)
 
 
-# ══════════════════════════════════════════════════════════════
-# Users
-# ══════════════════════════════════════════════════════════════
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
@@ -239,8 +222,8 @@ def _generate_api_credentials() -> tuple[str, str]:
     user_id   : 12-char uppercase hex  e.g. "A3F9C2D10B4E"
     user_hash : 48-char lowercase hex  e.g. "9f3a...c2b1"
     """
-    user_id   = secrets.token_hex(6).upper()          # 12 hex chars
-    user_hash = secrets.token_hex(24)                  # 48 hex chars
+    user_id   = secrets.token_hex(6).upper()          
+    user_hash = secrets.token_hex(24)               
     return user_id, user_hash
 
 
@@ -267,7 +250,7 @@ def _create_api_key_for_user_conn(conn, username: str, now: str | None = None):
         "SELECT id FROM api_keys WHERE owner_username=?", (username,)
     ).fetchone()
     if existing:
-        return  # already has credentials
+        return 
 
     api_url = os.getenv("API_URL", "https://api.example.com/data")
     user_id, user_hash = _generate_api_credentials()
@@ -342,9 +325,6 @@ def update_user_role(user_id: int, role: str):
         conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
 
 
-# ══════════════════════════════════════════════════════════════
-# Sensors metadata
-# ══════════════════════════════════════════════════════════════
 
 def upsert_sensor(sensor_id: str, name: str, lat: float, lon: float,
                   location: str = "", is_active: bool = True):
@@ -369,9 +349,10 @@ def delete_sensor(sensor_id: str):
         conn.execute("UPDATE sensors SET is_active=0 WHERE id=?", (sensor_id,))
 
 
-# ══════════════════════════════════════════════════════════════
-# API Keys
-# ══════════════════════════════════════════════════════════════
+def activate_sensor(sensor_id: str):
+    with get_conn() as conn:
+        conn.execute("UPDATE sensors SET is_active=1 WHERE id=?", (sensor_id,))
+
 
 def add_api_key(label: str, user_id: str, user_hash: str, api_url: str,
                 owner_username: str | None = None):
@@ -416,10 +397,6 @@ def delete_api_key(key_id: int):
     with get_conn() as conn:
         conn.execute("DELETE FROM api_keys WHERE id=?", (key_id,))
 
-
-# ══════════════════════════════════════════════════════════════
-# App Configs
-# ══════════════════════════════════════════════════════════════
 
 def set_config(key: str, value: str, description: str = ""):
     with get_conn() as conn:

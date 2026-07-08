@@ -2,7 +2,7 @@ import panel as pn
 import pandas as pd
 from auth import current_user, logout
 from db import (
-    list_sensors, upsert_sensor, delete_sensor,
+    list_sensors, upsert_sensor, delete_sensor, activate_sensor,
     list_api_keys, add_api_key, toggle_api_key, delete_api_key,
     list_configs, set_config,
     list_users, create_user, delete_user, update_user_role,
@@ -89,7 +89,7 @@ def _table(data, cols=None):
     )
 
 
-# ── Tabs ──────────────────────────────────────────────────────
+
 def _sensors_tab():
     n = _notice()
     th = pn.Column(sizing_mode="stretch_width")
@@ -132,6 +132,18 @@ def _sensors_tab():
         refresh()
     del_btn.on_click(on_del)
 
+    a_id = pn.widgets.TextInput(placeholder="Sensor ID", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    act_btn = pn.widgets.Button(name="✅ Activate", stylesheets=[_btn("#22C55E")])
+
+    def on_act(e):
+        sid = a_id.value.strip().upper()
+        if not sid: return
+        activate_sensor(sid)
+        _ok(n, f"Sensor {sid} activated.")
+        a_id.value = ""
+        refresh()
+    act_btn.on_click(on_act)
+
     return pn.Column(
         pn.pane.Markdown("## 📡 Sensors", styles=SECTION_TITLE),
         pn.layout.Divider(),
@@ -153,8 +165,9 @@ def _sensors_tab():
             styles=CARD, 
         ),
         pn.Column(
-            pn.pane.Markdown("### Deactivate", styles={"color":"#4B51A0"}),
+            pn.pane.Markdown("### Deactivate / Activate", styles={"color":"#4B51A0"}),
             pn.Row(_lbl("Sensor ID"), d_id, del_btn, styles={"gap":"14px","align-items":"flex-end"}),
+            pn.Row(_lbl("Sensor ID"), a_id, act_btn, styles={"gap":"14px","align-items":"flex-end"}),
             styles=CARD,
         ),
         pn.Column(pn.pane.Markdown("### All Sensors", styles={"color":"#4B51A0"}), th, styles=CARD),
@@ -172,21 +185,27 @@ def _api_keys_tab():
         th.objects = [_table(data, ["id","label","user_id","user_hash","api_url","is_active","created_at"])]
     refresh()
 
-    f_lbl  = pn.widgets.TextInput(placeholder="Label",       sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    f_uid  = pn.widgets.TextInput(placeholder="X-User-id",   sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    f_hash = pn.widgets.PasswordInput(placeholder="X-User-hash", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    f_url  = pn.widgets.TextInput(placeholder="https://...", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
-    add_btn = pn.widgets.Button(name="➕ Add", button_type="primary", stylesheets=[_btn()])
-
-    def on_add(e):
-        n.object = ""
-        if not all([f_lbl.value, f_uid.value, f_hash.value, f_url.value]):
-            return _err(n, "All fields required.")
-        add_api_key(f_lbl.value.strip(), f_uid.value.strip(), f_hash.value.strip(), f_url.value.strip())
-        _ok(n, f"Key **{f_lbl.value}** added.")
-        for w in (f_lbl, f_uid, f_hash, f_url): w.value = ""
-        refresh()
-    add_btn.on_click(on_add)
+    # ── Manual "Add API Key" form ──────────────────────────────────
+    # Commented out: credentials are auto-generated when a user is
+    # created (see _create_user_conn → _create_api_key_for_user_conn
+    # in db.py), so manual entry is redundant for normal usage.
+    #
+    # f_lbl  = pn.widgets.TextInput(placeholder="Label",       sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # f_uid  = pn.widgets.TextInput(placeholder="X-User-id",   sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # f_hash = pn.widgets.PasswordInput(placeholder="X-User-hash", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # f_url  = pn.widgets.TextInput(placeholder="https://...", sizing_mode="stretch_width", stylesheets=[INPUT_CSS])
+    # add_btn = pn.widgets.Button(name="➕ Add", button_type="primary", stylesheets=[_btn()])
+    #
+    # def on_add(e):
+    #     n.object = ""
+    #     if not all([f_lbl.value, f_uid.value, f_hash.value, f_url.value]):
+    #         return _err(n, "All fields required.")
+    #     add_api_key(f_lbl.value.strip(), f_uid.value.strip(), f_hash.value.strip(), f_url.value.strip())
+    #     _ok(n, f"Key **{f_lbl.value}** added.")
+    #     for w in (f_lbl, f_uid, f_hash, f_url): w.value = ""
+    #     refresh()
+    # add_btn.on_click(on_add)
+    # ───────────────────────────────────────────────────────────────
 
     t_id = pn.widgets.IntInput(placeholder="1", width=120, stylesheets=[INPUT_CSS])
     tog  = pn.widgets.Button(name="⏸ Toggle", stylesheets=[_btn("#F59E0B")])
@@ -214,19 +233,7 @@ def _api_keys_tab():
     return pn.Column(
         pn.pane.Markdown("## 🔑 API Keys", styles=SECTION_TITLE),
         pn.layout.Divider(),
-        pn.Column(
-            pn.Row(
-                pn.Column(_lbl("Label"),   f_lbl),
-                pn.Column(_lbl("API URL"), f_url),
-                sizing_mode="stretch_width", styles={"gap": "12px"},
-            ),
-            pn.Row(
-                pn.Column(_lbl("User ID"),   f_uid),
-                pn.Column(_lbl("User Hash"), f_hash),
-                sizing_mode="stretch_width", styles={"gap": "12px"},
-            ),
-            sizing_mode="stretch_width",
-        ),
+        n,
         pn.Column(
             pn.pane.Markdown("### Manage by ID", styles={"color":"#4B51A0"}),
             pn.Row(_lbl("Key ID"), t_id, tog, dl, styles={"gap":"12px","align-items":"flex-end"}),
@@ -372,7 +379,7 @@ def _users_tab():
 def _build_admin_panel(container: pn.Column, user: dict):
     back_btn = pn.widgets.Button(name="← Dashboard", button_type="light",
                                  stylesheets=[_btn("#FFFFFF", "#4B51A0")])
-    back_btn.js_on_click(code="window.location.href='/'")
+    back_btn.js_on_click(code="window.location.href='/dashboard'")
 
     logout_btn = pn.widgets.Button(name="Sign out", button_type="light",
                                    stylesheets=[_btn("#FEE2E2", "#EF4444")])
@@ -395,7 +402,7 @@ def _build_admin_panel(container: pn.Column, user: dict):
             <span style="color:#7B82B4; font-size:13px; white-space:nowrap;">
                 👤 <b>{user['username']}</b> · <code style="font-family:'DM Mono',monospace">{user['role']}</code>
             </span>
-            <a href="/" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+            <a href="/dashboard" style="font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
                 border-radius:8px; border:1.5px solid #4B51A0; background:#fff; color:#4B51A0;
                 padding:7px 18px; cursor:pointer; text-decoration:none;">← Dashboard</a>
                 <button onclick="window.location.href='/logout'"

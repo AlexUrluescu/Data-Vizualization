@@ -5,7 +5,7 @@ from db import verify_user
 _sessions: dict = {}
 
 COOKIE_NAME    = "aq_sid"
-COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
+COOKIE_MAX_AGE = 60 * 60 * 24 * 7 
 
 
 def current_user() -> dict | None:
@@ -30,9 +30,9 @@ def logout():
         _sessions.pop(token, None)
 
 
-# ── Shared redirect helper for Panel pages ────────────────────
+
 def redirect_to_login() -> pn.pane.HTML:
-    """Drop this into any Panel page when current_user() is None."""
+
     return pn.pane.HTML(
         '<script>window.location.href = "/login";</script>',
         width=0, height=0, margin=0,

@@ -128,7 +128,7 @@ label {
 }
 """
 
-# ── RadioBoxGroup / CheckBoxGroup (parameter & location selectors) ──
+
 my_custom_style = """
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
 
@@ -274,3 +274,78 @@ forecast_card_style = {
     "margin-bottom": "16px",
     "border-top": "3px solid #A78BFA",
 }
+
+chat_card_style = {
+    "background": "#FFFFFF",
+    "border-radius": "16px",
+    "box-shadow": "0 2px 16px rgba(100, 108, 180, 0.08)",
+    "padding": "20px 24px",
+    "margin-bottom": "16px",
+    "border-top": "3px solid #34D399",
+}
+
+chat_bubble_css = """
+.chat-history {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 12px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #D6D9F5 transparent;
+}
+.chat-history::-webkit-scrollbar { width: 6px; }
+.chat-history::-webkit-scrollbar-track { background: transparent; }
+.chat-history::-webkit-scrollbar-thumb {
+    background: #D6D9F5;
+    border-radius: 3px;
+}
+.chat-bubble {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    word-wrap: break-word;
+    animation: fadeIn 0.25s ease-out;
+}
+.chat-bubble.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #6366F1 0%, #4B51A0 100%);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble.assistant {
+    align-self: flex-start;
+    background: #F0F2FF;
+    color: #2D2F3E;
+    border: 1px solid #E0E4F5;
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble.assistant strong,
+.chat-bubble.assistant b { color: #4B51A0; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.chat-loading {
+    display: flex;
+    gap: 6px;
+    padding: 16px;
+    align-self: flex-start;
+}
+.chat-loading span {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #A5B4FC;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.chat-loading span:nth-child(1) { animation-delay: -0.32s; }
+.chat-loading span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+"""
